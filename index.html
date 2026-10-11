@@ -110,8 +110,8 @@ body {
   font-family: var(--font-display);
   line-height: 1;
 }
-.frac-num { font-size: clamp(30px, min(7.5vw, 14vh), 104px); color: var(--hit); }
-.frac-den { font-size: clamp(24px, min(5.5vw, 10vh), 76px); }
+.frac-num { font-size: clamp(36px, min(9.5vw, 17vh), 132px); color: var(--hit); }
+.frac-den { font-size: clamp(30px, min(7.5vw, 13vh), 104px); }
 .frac-unit { font-size: clamp(11px, 1.4vw, 17px); font-weight: 700; color: #6a6f80; }
 .frac-bar { width: 70%; height: 5px; border-radius: 3px; background: var(--ink); }
 .divider { height: 0; border-top: 2px dotted #d6cdb4; }
@@ -126,7 +126,7 @@ body {
 /* 右：ボタン */
 .controls {
   display: grid;
-  grid-template-rows: auto 1.4fr 1.4fr 1fr 1fr;
+  grid-template-rows: 1.4fr 1.4fr 1fr 1fr;
   gap: clamp(6px, 1.8vh, 16px);
   height: 100%;
   max-height: 100%;
@@ -269,12 +269,6 @@ body {
   </section>
 
   <section class="controls">
-    <div class="topbar">
-      <button class="btn-full" id="btnFull" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="fullLabel">全画面</span>
-      </button>
-    </div>
     <button class="btn btn-hit" id="btnHit" type="button">当たり</button>
     <button class="btn btn-miss" id="btnMiss" type="button">ハズレ</button>
     <button class="btn btn-sub" id="btnReset" type="button">リセット</button>
@@ -397,40 +391,6 @@ body {
     $('settings').hidden = true;
   });
 
-  // 全画面表示（Safari / Chrome 両対応：標準API と webkit 版の両方を試す）
-  var btnFull = $('btnFull'), fullLabel = $('fullLabel');
-  var toast = document.createElement('div'); toast.className = 'toast'; toast.hidden = true; document.body.appendChild(toast);
-  var toastTimer;
-  function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
-  function updateFullBtn() { fullLabel.textContent = fsElement() ? '解除' : '全画面'; }
-  function showFullNote(msg) {
-    toast.textContent = msg; toast.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toast.hidden = true; }, 3500);
-  }
-  btnFull.addEventListener('click', function () {
-    var el = document.documentElement;
-    try {
-      if (fsElement()) {
-        var exit = document.exitFullscreen || document.webkitExitFullscreen;
-        if (exit) { var r = exit.call(document); if (r && r.catch) r.catch(function(){}); }
-        return;
-      }
-      var req = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (!req) { showFullNote('このブラウザでは全画面表示が使えません。'); return; }
-      var p = req.call(el);
-      if (p && p.then) {
-        p.then(updateFullBtn)
-         .catch(function () { showFullNote('この表示環境では全画面が許可されませんでした。'); });
-      } else {
-        setTimeout(function () {
-          if (fsElement()) updateFullBtn();
-          else showFullNote('この表示環境では全画面が許可されませんでした。');
-        }, 400);
-      }
-    } catch (e) { showFullNote('この表示環境では全画面が許可されませんでした。'); }
-  });
-  document.addEventListener('fullscreenchange', updateFullBtn);
-  document.addEventListener('webkitfullscreenchange', updateFullBtn);
 
   render();
 })();
