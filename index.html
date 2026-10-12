@@ -147,20 +147,21 @@ body {
   color: #6a6f80;
 }
 .fraction { display: grid; justify-items: center; gap: clamp(2px, .6vh, 8px); }
-.frac-row { display: flex; align-items: baseline; justify-content: center; gap: .35em; }
+.frac-row { white-space: nowrap; display: flex; align-items: baseline; justify-content: center; gap: .35em; }
 .frac-num, .frac-den {
   font-family: var(--font-display);
   line-height: 1;
 }
-.frac-num { font-size: clamp(36px, min(9.5vw, 17vh), 132px); color: var(--hit); }
-.frac-den { font-size: clamp(30px, min(7.5vw, 13vh), 104px); }
+.frac-num { font-size: clamp(38px, min(11.5vw, 19vh), 160px); color: var(--hit); }
+.frac-den { font-size: clamp(38px, min(11.5vw, 19vh), 160px); }
 .frac-unit { font-size: clamp(11px, 1.4vw, 17px); font-weight: 700; color: #6a6f80; }
-.frac-bar { width: 70%; height: 5px; border-radius: 3px; background: var(--ink); }
+.frac-bar { width: 94%; height: 5px; border-radius: 3px; background: var(--ink); }
 .divider { height: 0; border-top: 2px dotted #d6cdb4; }
 .percent {
   font-family: var(--font-display);
-  font-size: clamp(32px, min(8vw, 15vh), 112px);
+  font-size: clamp(32px, min(8vw, 14vh), 112px);
   line-height: 1;
+  white-space: nowrap;
 }
 .percent small { font-size: .45em; margin-left: .08em; }
 .percent.empty { color: #b9b3a3; }
@@ -321,6 +322,9 @@ body {
 }
 .clock .colon { display: inline-block; width: .42em; text-align: center; }
 .clock-t { display: inline-block; }
+
+.label-main { font-size: clamp(15px, min(2.4vw, 4.4vh), 28px); letter-spacing: .16em; color: #4f5468; }
+.label-sub { font-size: clamp(13px, min(1.9vw, 3.4vh), 22px); color: #555a6e; margin-bottom: calc(-1 * clamp(4px, 1.4vh, 14px)); }
 </style>
 </head>
 <body>
@@ -343,14 +347,14 @@ body {
   </section>
 
   <section class="board" aria-live="polite">
-    <div class="label">残り当たり ／ 残りくじ</div>
+    <div class="label label-main">当たり ／ 残数</div>
     <div class="fraction">
-      <div class="frac-row"><span class="frac-num" id="numB">10</span><span class="frac-unit">本</span></div>
+      <div class="frac-row"><span class="frac-num" id="numB">10</span></div>
       <div class="frac-bar"></div>
-      <div class="frac-row"><span class="frac-den" id="numA">100</span><span class="frac-unit">本</span></div>
+      <div class="frac-row"><span class="frac-den" id="numA">100</span></div>
     </div>
     <div class="divider"></div>
-    <div class="label">現在の当たり確率</div>
+    <div class="label label-sub">現在の当たり確率</div>
     <div class="percent" id="numC">10.0<small>%</small></div>
   </section>
 
@@ -426,6 +430,60 @@ body {
 
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 
+  // 数値が枠の幅からはみ出す場合だけ縮小する
+  var board = document.querySelector('.board');
+  function fitOne(target, row) {
+    target.style.fontSize = '';
+    var cs = getComputedStyle(board);
+    var avail = board.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var rg = document.createRange(); rg.selectNodeContents(row);
+    var need = rg.getBoundingClientRect().width;
+    if (need > avail * 0.96) {
+      var size = parseFloat(getComputedStyle(target).fontSize);
+      target.style.fontSize = (size * avail * 0.96 / need).toFixed(2) + 'px';
+    }
+  }
+  function fitAll() {
+    // 数値Aと数値Bは常に同じサイズ（はみ出す方に合わせて両方縮小）
+    fitOne(elB, elB.parentNode); fitOne(elA, elA.parentNode); fitOne(elC, elC);
+    var sa = parseFloat(getComputedStyle(elA).fontSize), sb = parseFloat(getComputedStyle(elB).fontSize);
+    var m = Math.min(sa, sb).toFixed(2) + 'px';
+    elA.style.fontSize = m; elB.style.fontSize = m;
+    centerBar();
+  }
+  // 横線を、数値B（上）の文字の下端と数値A（下）の文字の上端のちょうど中間に置く
+  var bar = document.querySelector('.frac-bar'), mcv = document.createElement('canvas').getContext('2d');
+  function ink(el) {
+    var cs = getComputedStyle(el), fs = parseFloat(cs.fontSize);
+    mcv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    var m = mcv.measureText('0123456789');
+    if (!m || m.actualBoundingBoxAscent === undefined || m.fontBoundingBoxAscent === undefined) return null;
+    var asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
+    var base = (fs - (asc + desc)) / 2 + asc; // line-height:1 のときのベースライン位置
+    return { top: base - m.actualBoundingBoxAscent, bottom: base + m.actualBoundingBoxDescent };
+  }
+  function centerBar() {
+    if (!bar) return;
+    bar.style.transform = '';
+    var ib = ink(elB), ia = ink(elA); if (!ib || !ia) return;
+    var rb = elB.getBoundingClientRect(), ra = elA.getBoundingClientRect(), rr = bar.getBoundingClientRect();
+    var gapTop = rr.top - (rb.top + ib.bottom), gapBot = (ra.top + ia.top) - rr.bottom;
+    var d = (gapBot - gapTop) / 2;
+    if (isFinite(d) && Math.abs(d) > 0.5) bar.style.transform = 'translateY(' + d.toFixed(1) + 'px)';
+    // 「現在の当たり確率」を点線と数値Cの文字の上端の中間に置く
+    var lab = document.querySelector('.label-sub'), dv = document.querySelector('.divider');
+    if (lab && dv) {
+      lab.style.transform = '';
+      var ic = ink(elC);
+      if (ic) {
+        var rd = dv.getBoundingClientRect(), rc = elC.getBoundingClientRect(), rl = lab.getBoundingClientRect();
+        var mid = (rd.bottom + rc.top + ic.top) / 2, cur = (rl.top + rl.bottom) / 2, dl = mid - cur;
+        if (isFinite(dl) && Math.abs(dl) > 0.5) lab.style.transform = 'translateY(' + dl.toFixed(1) + 'px)';
+      }
+    }
+  }
+  var fr; window.addEventListener('resize', function () { clearTimeout(fr); fr = setTimeout(fitAll, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
   function render(changed) {
     elA.textContent = state.A;
     elB.textContent = state.B;
@@ -434,6 +492,7 @@ body {
     else { elC.innerHTML = p + '<small>%</small>'; elC.classList.remove('empty'); }
     $('btnHit').disabled = state.B <= 0;
     $('btnMiss').disabled = state.A - state.B <= 0;
+    fitAll();
     if (changed) { bump(elA); if (changed === 'hit') bump(elB); bump(elC); }
   }
 
