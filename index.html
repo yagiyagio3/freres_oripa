@@ -342,6 +342,24 @@ body {
 .date .wd { font-size: .78em; margin-left: .25em; color: var(--gold); }
 .date .wd.sat { color: #8fb8ff; }
 .date .wd.sun { color: #ff8f8f; }
+
+/* 横長の画面（Androidタブレット 2000x1200 など、縦横比 3:2 以上）用レイアウト
+   左右の列を同じ比率で細くし、中央の枠を広く・高くする（iPad はこの設定の対象外） */
+@media (min-aspect-ratio: 3/2) {
+  .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr) minmax(0, 1fr); gap: clamp(12px, 2vw, 32px); }
+  .board {
+    align-self: stretch;
+    margin-block: 1vh;
+    align-content: space-evenly;
+    padding: clamp(10px, 2.4vh, 28px) clamp(16px, 2.4vw, 40px);
+  }
+  .frac-num, .frac-den { font-size: clamp(40px, min(13vw, 22vh), 240px); }
+  .percent { font-size: clamp(32px, min(10vw, 16vh), 180px); }
+  .label-main { font-size: clamp(15px, min(2.4vw, 4.6vh), 34px); }
+  .label-sub { font-size: clamp(13px, min(1.9vw, 3.6vh), 26px); }
+  .btn { font-size: clamp(16px, min(2.8vw, 6vh), 40px); }
+  .btn-sub { font-size: clamp(13px, min(1.9vw, 4vh), 26px); }
+}
 </style>
 </head>
 <body>
