@@ -171,7 +171,7 @@ body {
 /* 右：ボタン */
 .controls {
   display: grid;
-  grid-template-rows: 1.4fr 1.4fr 1fr 1fr;
+  grid-template-rows: 1.4fr 1.4fr 1fr 1fr 1fr;
   gap: clamp(6px, 1.8vh, 16px);
   height: 100%;
   max-height: 100%;
@@ -217,6 +217,7 @@ body {
 .btn:disabled { opacity: .35; cursor: not-allowed; }
 .btn-hit { background: var(--hit); }
 .btn-miss { background: var(--miss); }
+.btn-undo { background: #2f8a5c; font-size: clamp(14px, min(2.5vw, 4.6vh), 32px); }
 .btn-sub {
   font-size: clamp(13px, min(2.2vw, 4vh), 26px);
   background: transparent;
@@ -359,7 +360,9 @@ body {
   .label-sub { font-size: clamp(13px, min(1.9vw, 3.6vh), 26px); }
   .btn { font-size: clamp(16px, min(2.8vw, 6vh), 40px); }
   .btn-sub { font-size: clamp(13px, min(1.9vw, 4vh), 26px); }
+  .btn-undo { font-size: clamp(14px, min(2.2vw, 4.6vh), 30px); }
 }
+.ver { margin: 0; font-size: 11px; color: #8a8a94; text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -397,6 +400,7 @@ body {
   <section class="controls">
     <button class="btn btn-hit" id="btnHit" type="button">当たり</button>
     <button class="btn btn-miss" id="btnMiss" type="button">ハズレ</button>
+    <button class="btn btn-undo" id="btnUndo" type="button">1つ戻す</button>
     <button class="btn btn-sub" id="btnReset" type="button">リセット</button>
     <button class="btn btn-sub btn-gear" id="btnSettings" type="button">設定</button>
   </section>
@@ -418,6 +422,7 @@ body {
       <button type="button" class="dbtn dbtn-cancel" id="btnCancel">キャンセル</button>
       <button type="submit" class="dbtn dbtn-ok">登録</button>
     </div>
+    <p class="ver" id="verInfo"></p>
   </form>
 </div>
 
@@ -451,6 +456,10 @@ body {
     var saved = JSON.parse(localStorage.getItem(KEY));
     if (saved && Number.isInteger(saved.A) && Number.isInteger(saved.B)) state = saved;
   } catch (e) {}
+
+  if (!Array.isArray(state.hist)) state.hist = [];
+  // 「1つ戻す」用の履歴（直前の残数・当たり数を最大300件まで保存）
+  function push() { state.hist.push([state.A, state.B]); if (state.hist.length > 300) state.hist.shift(); }
 
   var $ = function (id) { return document.getElementById(id); };
   var elA = $('numA'), elB = $('numB'), elC = $('numC');
@@ -528,17 +537,23 @@ body {
     else { elC.innerHTML = p + '<small>%</small>'; elC.classList.remove('empty'); }
     $('btnHit').disabled = state.B <= 0;
     $('btnMiss').disabled = state.A - state.B <= 0;
+    $('btnUndo').disabled = !state.hist.length;
     fitAll();
     if (changed) { bump(elA); if (changed === 'hit') bump(elB); bump(elC); }
   }
 
   $('btnHit').addEventListener('click', function () {
     if (state.B <= 0) return;
-    state.A--; state.B--; save(); render('hit');
+    push(); state.A--; state.B--; save(); render('hit');
   });
   $('btnMiss').addEventListener('click', function () {
     if (state.A - state.B <= 0) return;
-    state.A--; save(); render('miss');
+    push(); state.A--; save(); render('miss');
+  });
+  $('btnUndo').addEventListener('click', function () {
+    var p = state.hist.pop(); if (!p) return;
+    var wasHit = p[1] !== state.B;
+    state.A = p[0]; state.B = p[1]; save(); render(wasHit ? 'hit' : 'miss');
   });
 
   // リセット（登録した初期値に戻す）
@@ -549,7 +564,7 @@ body {
   });
   $('resetNo').addEventListener('click', function () { $('confirmReset').hidden = true; });
   $('resetYes').addEventListener('click', function () {
-    state.A = state.initA; state.B = state.initB; save(); render('hit');
+    state.A = state.initA; state.B = state.initB; state.hist = []; save(); render('hit');
     $('confirmReset').hidden = true;
   });
 
@@ -567,7 +582,7 @@ body {
     if (inTotal.value === '' || !Number.isInteger(a) || a < 1) { err.textContent = 'くじの全数は1以上の整数で入力してください。'; inTotal.focus(); return; }
     if (inWin.value === '' || !Number.isInteger(b) || b < 0) { err.textContent = '当たり数は0以上の整数で入力してください。'; inWin.focus(); return; }
     if (b > a) { err.textContent = '当たり数はくじの全数以下にしてください。'; inWin.focus(); return; }
-    state = { A: a, B: b, initA: a, initB: b };
+    state = { A: a, B: b, initA: a, initB: b, hist: [] };
     save(); render('hit');
     $('settings').hidden = true;
   });
@@ -746,6 +761,26 @@ body {
   tick();
 })();
 </script>
+<script>
+(function () {
+  var VER = '2026-10-20a';
+  var v = document.getElementById('verInfo');
+  function upd() {
+    if (!v) return;
+    var w = window.innerWidth, h = window.innerHeight;
+    v.textContent = 'バージョン ' + VER + '　／　画面 ' + w + '×' + h + '（比 ' + (w / h).toFixed(2) + '）';
+  }
+  upd(); window.addEventListener('resize', upd);
+  document.getElementById('btnSettings').addEventListener('click', upd);
+  // 起動のたびに最新版を取りに行く仕組み（GitHub Pages 上でのみ有効）
+  try {
+    if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  } catch (e) {}
+})();
+</script>
+
 
 
 
