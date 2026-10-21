@@ -627,7 +627,8 @@ body {
     $('logoRadioA').checked = logo === 'a'; $('logoRadioB').checked = logo === 'b';
     inTotal.value = state.initA; inWin.value = state.initB; err.textContent = '';
     $('settings').hidden = false;
-    inTotal.focus(); inTotal.select();
+    // 開いたときは何も選択しない（iPhone・iPadでキーボードが勝手に出ないように）
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   });
   $('btnCancel').addEventListener('click', function () { $('settings').hidden = true; });
   // 「登録」はフォーム送信に頼らず、ボタンのクリックで直接処理する（プレビュー画面などでも動くように）
@@ -827,7 +828,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-22d';
+  var VER = '2026-10-22e';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
