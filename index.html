@@ -376,6 +376,21 @@ body {
 }
 .radio input { color-scheme: light; width: 18px; height: 18px; margin: 0; accent-color: var(--hit); flex: none; }
 .radio:has(input:checked) { border-color: var(--hit); background: #fff3ef; }
+
+/* 設定ウィンドウ：見出しを左、入力欄を右に並べて、横長・低めにする */
+.overlay { padding: max(8px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.dialog { width: min(600px, 100%); padding: clamp(10px, 2.2vh, 18px) clamp(14px, 2.4vw, 24px); gap: clamp(6px, 1.4vh, 10px); }
+.dialog h2 { font-size: 18px; }
+.dialog .field { grid-template-columns: 7.2em minmax(0, 1fr); align-items: center; column-gap: 12px; }
+.dialog .field label, .dialog .field-label { font-weight: 800; font-size: 14px; white-space: nowrap; }
+.dialog .field input { font-size: 18px; padding: 6px 10px; }
+.radios { gap: 8px; }
+.radio { padding: 6px 8px; font-size: 15px; }
+.dialog .error { min-height: 0; font-size: 13px; }
+.dialog .error:empty { display: none; }
+.dialog .actions { margin-top: 2px; }
+.dbtn { padding: 8px; }
+.ver { white-space: nowrap; overflow: hidden; line-height: 1.3; }
 </style>
 </head>
 <body>
@@ -442,17 +457,17 @@ body {
       <label for="inWin">当たり数</label>
       <input id="inWin" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1">
     </div>
-    <fieldset class="logo-pick">
-      <legend>ロゴ</legend>
-      <div class="radios">
+    <div class="field">
+      <span class="field-label" id="logoLabel">ロゴ</span>
+      <div class="radios" role="radiogroup" aria-labelledby="logoLabel">
         <label class="radio" for="logoRadioA"><input type="radio" name="logo" value="a" id="logoRadioA">フレリア</label>
         <label class="radio" for="logoRadioB"><input type="radio" name="logo" value="b" id="logoRadioB">はまちゃん</label>
       </div>
-    </fieldset>
+    </div>
     <p class="error" id="formError"></p>
     <div class="actions">
       <button type="button" class="dbtn dbtn-cancel" id="btnCancel">キャンセル</button>
-      <button type="submit" class="dbtn dbtn-ok">登録</button>
+      <button type="button" class="dbtn dbtn-ok" id="btnOk">登録</button>
     </div>
     <p class="ver" id="verInfo"></p>
   </form>
@@ -615,8 +630,13 @@ body {
     inTotal.focus(); inTotal.select();
   });
   $('btnCancel').addEventListener('click', function () { $('settings').hidden = true; });
-  $('settingsForm').addEventListener('submit', function (e) {
-    e.preventDefault();
+  // 「登録」はフォーム送信に頼らず、ボタンのクリックで直接処理する（プレビュー画面などでも動くように）
+  $('settingsForm').addEventListener('submit', function (e) { e.preventDefault(); doRegister(); });
+  $('btnOk').addEventListener('click', function (e) { e.preventDefault(); doRegister(); });
+  [inTotal, inWin].forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegister(); } });
+  });
+  function doRegister() {
     var a = Number(inTotal.value), b = Number(inWin.value);
     if (inTotal.value === '' || !Number.isInteger(a) || a < 1) { err.textContent = 'くじの全数は1以上の整数で入力してください。'; inTotal.focus(); return; }
     if (inWin.value === '' || !Number.isInteger(b) || b < 0) { err.textContent = '当たり数は0以上の整数で入力してください。'; inWin.focus(); return; }
@@ -627,7 +647,7 @@ body {
     applyLogo();
     save(); render('hit');
     $('settings').hidden = true;
-  });
+  }
 
 
   render();
@@ -643,6 +663,7 @@ body {
   function build() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
+    if (W < 2 || H < 2) { base = null; return false; } // 画面サイズが決まる前は描かない
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     var r = rnd(20261012);
     base = document.createElement('canvas'); base.width = cv.width; base.height = cv.height;
@@ -705,6 +726,7 @@ body {
     for (var j = 0; j < 26; j++) bokeh.push({ x: r() * W, y: H * (.35 + r() * .65), rad: 10 + r() * 38, c: bc[Math.floor(r() * bc.length)], a: .08 + r() * .16, vy: .08 + r() * .25, vx: (r() - .5) * .12, p: r() * 6.28 });
   }
   function frame(t) {
+    if (!base || !base.width || !base.height) { if (window.innerWidth > 1 && window.innerHeight > 1) build(); if (!base) return; }
     var s = t / 1000;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(base, 0, 0);
@@ -805,12 +827,18 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-22a';
+  var VER = '2026-10-22d';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
     var w = window.innerWidth, h = window.innerHeight;
     v.textContent = 'バージョン ' + VER + '　／　画面 ' + w + '×' + h + '（比 ' + (w / h).toFixed(2) + '）';
+    // 1行に収まらないときは文字を小さくする
+    v.style.fontSize = '';
+    requestAnimationFrame(function () {
+      var fs = parseFloat(getComputedStyle(v).fontSize);
+      if (v.scrollWidth > v.clientWidth && v.clientWidth > 0) v.style.fontSize = Math.max(7, fs * v.clientWidth / v.scrollWidth * 0.98).toFixed(2) + 'px';
+    });
   }
   upd(); window.addEventListener('resize', upd);
   document.getElementById('btnSettings').addEventListener('click', upd);
