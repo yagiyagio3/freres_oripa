@@ -422,6 +422,32 @@ body {
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 .dialog .field input { -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; cursor: text; }
+
+/* 数字キー方式の入力欄 */
+.numfield {
+  display: flex; align-items: center; justify-content: flex-end; width: 100%; min-width: 0; min-height: 40px;
+  padding: 4px 12px; border: 2px solid #cfc6ad; border-radius: 10px; background: #fff; color: var(--ink);
+  font: 700 20px var(--font-body); font-variant-numeric: tabular-nums; cursor: pointer; text-align: right;
+}
+.numfield.active { border-color: var(--hit); box-shadow: 0 0 0 3px rgba(216,69,47,.15); }
+.numfield.fresh .nv { background: rgba(216,69,47,.16); border-radius: 4px; padding: 0 4px; }
+.numfield.active .nv::after { content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: var(--hit); animation: caret 1s steps(1) infinite; }
+.numfield.fresh .nv::after { display: none; }
+@keyframes caret { 50% { opacity: 0; } }
+.numfield:focus-visible, .key:focus-visible, .radio:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.keypad { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
+.key {
+  min-width: 0; height: clamp(34px, 7vh, 46px); border-radius: 8px; border: 1px solid #c9c0a6; background: #fff;
+  font: 800 18px var(--font-body); color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 0 #c9c0a6; touch-action: manipulation;
+}
+.key:active { transform: translateY(2px); box-shadow: none; background: #f3eee0; }
+.key-fn { background: #ece6d6; }
+.radio { border: 2px solid #cfc6ad; color: var(--ink); }
+.radio .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #9a937f; background: #fff; flex: none; box-sizing: border-box; }
+.radio[aria-checked="true"] { border-color: var(--hit); background: #fff3ef; }
+.radio[aria-checked="true"] .dot { border: 5px solid var(--hit); }
+@media (max-width: 520px) { .keypad { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -478,21 +504,24 @@ body {
 </main>
 
 <div class="overlay" id="settings" hidden>
-  <form class="dialog" id="settingsForm" novalidate>
+  <div class="dialog" id="settingsForm" role="dialog" aria-label="くじの設定">
     <h2>くじの設定</h2>
     <div class="field">
-      <label for="inTotal">くじの全数</label>
-      <input id="inTotal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+      <span class="field-label" id="lblTotal">くじの全数</span>
+      <button type="button" class="numfield" id="fTotal" aria-labelledby="lblTotal"><span class="nv"></span></button>
     </div>
     <div class="field">
-      <label for="inWin">当たり数</label>
-      <input id="inWin" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+      <span class="field-label" id="lblWin">当たり数</span>
+      <button type="button" class="numfield" id="fWin" aria-labelledby="lblWin"><span class="nv"></span></button>
+    </div>
+    <div class="keypad" id="keypad" aria-label="数字キー">
+      <button type="button" class="key" data-k="1">1</button><button type="button" class="key" data-k="2">2</button><button type="button" class="key" data-k="3">3</button><button type="button" class="key" data-k="4">4</button><button type="button" class="key" data-k="5">5</button><button type="button" class="key" data-k="6">6</button><button type="button" class="key" data-k="7">7</button><button type="button" class="key" data-k="8">8</button><button type="button" class="key" data-k="9">9</button><button type="button" class="key" data-k="0">0</button><button type="button" class="key key-fn" data-k="back" aria-label="1文字消す">←</button><button type="button" class="key key-fn" data-k="clear" aria-label="クリア">C</button>
     </div>
     <div class="field">
       <span class="field-label" id="logoLabel">ロゴ</span>
       <div class="radios" role="radiogroup" aria-labelledby="logoLabel">
-        <label class="radio" for="logoRadioA"><input type="radio" name="logo" value="a" id="logoRadioA">フレリア</label>
-        <label class="radio" for="logoRadioB"><input type="radio" name="logo" value="b" id="logoRadioB">はまちゃん</label>
+        <button type="button" class="radio" id="logoBtnA" role="radio" aria-checked="true"><span class="dot"></span>フレリア</button>
+        <button type="button" class="radio" id="logoBtnB" role="radio" aria-checked="false"><span class="dot"></span>はまちゃん</button>
       </div>
     </div>
     <p class="error" id="formError"></p>
@@ -501,7 +530,7 @@ body {
       <button type="button" class="dbtn dbtn-ok" id="btnOk">登録</button>
     </div>
     <p class="ver" id="verInfo"></p>
-  </form>
+  </div>
 </div>
 
 <div class="overlay" id="confirmReset" hidden>
@@ -646,39 +675,67 @@ body {
     $('confirmReset').hidden = true;
   });
 
-  // 設定
-  var inTotal = $('inTotal'), inWin = $('inWin'), err = $('formError');
+  // 設定（入力はiPadのキーボードを使わず、画面内の数字キーで行う）
+  var err = $('formError');
+  var fTotal = $('fTotal'), fWin = $('fWin');
+  var vals = { total: '', win: '' }, active = 'total', fresh = true;
   // ロゴの選択（'a'=フレリア、'b'=はまちゃん）を端末内に保存
   var LOGO_KEY = 'kuji-board-logo';
-  var logo = 'a';
+  var logo = 'a', pick = 'a';
   try { var lg = localStorage.getItem(LOGO_KEY); if (lg === 'a' || lg === 'b') logo = lg; } catch (e) {}
   function applyLogo() { $('logoA').hidden = logo !== 'a'; $('logoB').hidden = logo !== 'b'; }
   applyLogo();
+  function showPick() {
+    $('logoBtnA').setAttribute('aria-checked', pick === 'a' ? 'true' : 'false');
+    $('logoBtnB').setAttribute('aria-checked', pick === 'b' ? 'true' : 'false');
+  }
+  $('logoBtnA').addEventListener('click', function () { pick = 'a'; showPick(); });
+  $('logoBtnB').addEventListener('click', function () { pick = 'b'; showPick(); });
+  function showFields() {
+    fTotal.querySelector('.nv').textContent = vals.total;
+    fWin.querySelector('.nv').textContent = vals.win;
+    fTotal.classList.toggle('active', active === 'total'); fWin.classList.toggle('active', active === 'win');
+    fTotal.classList.toggle('fresh', active === 'total' && fresh); fWin.classList.toggle('fresh', active === 'win' && fresh);
+  }
+  function select(k) { active = k; fresh = true; err.textContent = ''; showFields(); }
+  fTotal.addEventListener('click', function () { select('total'); });
+  fWin.addEventListener('click', function () { select('win'); });
+  function press(k) {
+    var v = vals[active];
+    if (k === 'clear') v = '';
+    else if (k === 'back') v = fresh ? '' : v.slice(0, -1);
+    else { if (fresh || v === '0') v = ''; if (v.length < 6) v += k; }
+    fresh = false; vals[active] = v; err.textContent = ''; showFields();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#keypad .key'), function (b) {
+    b.addEventListener('click', function () { press(b.getAttribute('data-k')); });
+  });
+  // 外付けキーボードがある場合はキー入力も使える
+  document.addEventListener('keydown', function (e) {
+    if ($('settings').hidden) return;
+    if (/^[0-9]$/.test(e.key)) { e.preventDefault(); press(e.key); }
+    else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
+    else if (e.key === 'Delete') { e.preventDefault(); press('clear'); }
+    else if (e.key === 'Tab') { e.preventDefault(); select(active === 'total' ? 'win' : 'total'); }
+    else if (e.key === 'Enter') { e.preventDefault(); doRegister(); }
+    else if (e.key === 'Escape') { $('settings').hidden = true; }
+  });
   $('btnSettings').addEventListener('click', function () {
-    $('logoRadioA').checked = logo === 'a'; $('logoRadioB').checked = logo === 'b';
-    inTotal.value = state.initA; inWin.value = state.initB; err.textContent = '';
+    pick = logo; showPick();
+    vals.total = String(state.initA); vals.win = String(state.initB); err.textContent = '';
+    select('total');
     $('settings').hidden = false;
-    // 開いたときは何も選択しない（iPhone・iPadでキーボードが勝手に出ないように）
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   });
   $('btnCancel').addEventListener('click', function () { $('settings').hidden = true; });
-  // 「登録」はフォーム送信に頼らず、ボタンのクリックで直接処理する（プレビュー画面などでも動くように）
-  $('settingsForm').addEventListener('submit', function (e) { e.preventDefault(); doRegister(); });
   $('btnOk').addEventListener('click', function (e) { e.preventDefault(); doRegister(); });
-  // 全角数字を半角に変換し、数字以外は取り除く
-  function toHalf(v) { return String(v).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[^0-9]/g, ''); }
-  [inTotal, inWin].forEach(function (el) {
-    el.addEventListener('input', function () { var v = toHalf(el.value); if (v !== el.value) el.value = v; });
-    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegister(); } });
-  });
   function doRegister() {
-    inTotal.value = toHalf(inTotal.value); inWin.value = toHalf(inWin.value);
-    var a = Number(inTotal.value), b = Number(inWin.value);
-    if (inTotal.value === '' || !Number.isInteger(a) || a < 1) { err.textContent = 'くじの全数は1以上の整数で入力してください。'; inTotal.focus(); return; }
-    if (inWin.value === '' || !Number.isInteger(b) || b < 0) { err.textContent = '当たり数は0以上の整数で入力してください。'; inWin.focus(); return; }
-    if (b > a) { err.textContent = '当たり数はくじの全数以下にしてください。'; inWin.focus(); return; }
+    var a = Number(vals.total), b = Number(vals.win);
+    if (vals.total === '' || !Number.isInteger(a) || a < 1) { err.textContent = 'くじの全数は1以上の整数で入力してください。'; select('total'); return; }
+    if (vals.win === '' || !Number.isInteger(b) || b < 0) { err.textContent = '当たり数は0以上の整数で入力してください。'; select('win'); err.textContent = '当たり数は0以上の整数で入力してください。'; return; }
+    if (b > a) { select('win'); err.textContent = '当たり数はくじの全数以下にしてください。'; return; }
     state = { A: a, B: b, initA: a, initB: b, hist: [] };
-    logo = $('logoRadioB').checked ? 'b' : 'a';
+    logo = pick;
     try { localStorage.setItem(LOGO_KEY, logo); } catch (e) {}
     applyLogo();
     save(); render('hit');
@@ -863,7 +920,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-23b';
+  var VER = '2026-10-23c';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
