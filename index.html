@@ -45,7 +45,6 @@ body {
   padding-inline: 16px;
   overflow: hidden;
   touch-action: manipulation;
-  -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 .app {
@@ -417,6 +416,12 @@ body {
 
 /* 入力欄：iPad・iPhoneで確実にタップ・入力できるように */
 .dialog .field input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; touch-action: manipulation; pointer-events: auto; position: relative; z-index: 1; }
+
+/* 文字の選択を止めるのは、ボタン・数字・ロゴなど入力欄以外だけにする（iPadで入力欄が反応しなくなるのを防ぐ） */
+.app, .rotate, .dialog h2, .dialog .field label, .dialog .field-label, .radio, .dbtn, .ver, .msg {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.dialog .field input { -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; cursor: text; }
 </style>
 </head>
 <body>
@@ -664,10 +669,6 @@ body {
   function toHalf(v) { return String(v).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[^0-9]/g, ''); }
   [inTotal, inWin].forEach(function (el) {
     el.addEventListener('input', function () { var v = toHalf(el.value); if (v !== el.value) el.value = v; });
-    // iPad・iPhone：タップしたら確実に入力状態にする
-    el.addEventListener('touchend', function (e) {
-      if (document.activeElement !== el) { e.preventDefault(); el.focus(); try { var n = el.value.length; el.setSelectionRange(n, n); } catch (x) {} }
-    });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegister(); } });
   });
   function doRegister() {
@@ -862,7 +863,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-23a';
+  var VER = '2026-10-23b';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
