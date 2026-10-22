@@ -414,6 +414,9 @@ body {
   .frac-num, .frac-den { font-size: clamp(40px, min(13vw, 23vh), 260px); }
   .percent { font-size: clamp(32px, min(10vw, 17vh), 190px); }
 }
+
+/* 入力欄：iPad・iPhoneで確実にタップ・入力できるように */
+.dialog .field input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; touch-action: manipulation; pointer-events: auto; position: relative; z-index: 1; }
 </style>
 </head>
 <body>
@@ -474,11 +477,11 @@ body {
     <h2>くじの設定</h2>
     <div class="field">
       <label for="inTotal">くじの全数</label>
-      <input id="inTotal" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1">
+      <input id="inTotal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
     </div>
     <div class="field">
       <label for="inWin">当たり数</label>
-      <input id="inWin" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1">
+      <input id="inWin" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
     </div>
     <div class="field">
       <span class="field-label" id="logoLabel">ロゴ</span>
@@ -657,10 +660,18 @@ body {
   // 「登録」はフォーム送信に頼らず、ボタンのクリックで直接処理する（プレビュー画面などでも動くように）
   $('settingsForm').addEventListener('submit', function (e) { e.preventDefault(); doRegister(); });
   $('btnOk').addEventListener('click', function (e) { e.preventDefault(); doRegister(); });
+  // 全角数字を半角に変換し、数字以外は取り除く
+  function toHalf(v) { return String(v).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[^0-9]/g, ''); }
   [inTotal, inWin].forEach(function (el) {
+    el.addEventListener('input', function () { var v = toHalf(el.value); if (v !== el.value) el.value = v; });
+    // iPad・iPhone：タップしたら確実に入力状態にする
+    el.addEventListener('touchend', function (e) {
+      if (document.activeElement !== el) { e.preventDefault(); el.focus(); try { var n = el.value.length; el.setSelectionRange(n, n); } catch (x) {} }
+    });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegister(); } });
   });
   function doRegister() {
+    inTotal.value = toHalf(inTotal.value); inWin.value = toHalf(inWin.value);
     var a = Number(inTotal.value), b = Number(inWin.value);
     if (inTotal.value === '' || !Number.isInteger(a) || a < 1) { err.textContent = 'くじの全数は1以上の整数で入力してください。'; inTotal.focus(); return; }
     if (inWin.value === '' || !Number.isInteger(b) || b < 0) { err.textContent = '当たり数は0以上の整数で入力してください。'; inWin.focus(); return; }
@@ -851,7 +862,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-22f';
+  var VER = '2026-10-23a';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
@@ -874,6 +885,23 @@ body {
   } catch (e) {}
 })();
 </script>
+<script>
+(function () {
+  // キーボードが出たら、設定ウィンドウを見えている範囲（キーボードの上）に収める
+  var vv = window.visualViewport; if (!vv) return;
+  var ovs = [document.getElementById('settings'), document.getElementById('confirmReset')];
+  function fit() {
+    var kb = window.innerHeight - vv.height > 80; // キーボード表示中
+    ovs.forEach(function (o) {
+      if (!o) return;
+      if (kb) { o.style.top = vv.offsetTop + 'px'; o.style.height = vv.height + 'px'; o.style.bottom = 'auto'; o.style.alignItems = 'start'; o.style.overflow = 'auto'; }
+      else { o.style.top = ''; o.style.height = ''; o.style.bottom = ''; o.style.alignItems = ''; o.style.overflow = ''; }
+    });
+  }
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+})();
+</script>
+
 
 
 
