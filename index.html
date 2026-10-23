@@ -448,10 +448,22 @@ body {
 .radio[aria-checked="true"] { border-color: var(--hit); background: #fff3ef; }
 .radio[aria-checked="true"] .dot { border: 5px solid var(--hit); }
 @media (max-width: 520px) { .keypad { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+/* 軽量化：動く背景の上でのぼかし・影・色合成をやめる */
+#nightFx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none; }
+.btn-sub, .clock { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(12, 18, 36, .74); }
+.btn-sub:active { background: rgba(30, 40, 70, .85); }
+.logo-stage { filter: none !important; }
+.logo-stage::before { content: ""; position: absolute; inset: 4% 2% -4%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.45), rgba(0,0,0,0)); z-index: -1; }
+.ls-shine { mix-blend-mode: normal !important; opacity: .55; }
+.ls-bg, .ls-char, .ls-hand, .ls-shine { will-change: transform; backface-visibility: hidden; }
+.frac-num, .frac-den, .percent { will-change: transform; }
+@media (prefers-reduced-motion: no-preference) { .bump { animation-duration: .2s; } }
 </style>
 </head>
 <body>
 <canvas id="nightBg" aria-hidden="true"></canvas>
+<canvas id="nightFx" aria-hidden="true"></canvas>
 <main class="app">
   <section class="logo" aria-label="ロゴ">
     <div class="logo-stage logo-a" id="logoA" role="img" aria-label="LIVE TCG フレリア">
@@ -636,6 +648,7 @@ body {
   }
   var fr; window.addEventListener('resize', function () { clearTimeout(fr); fr = setTimeout(fitAll, 120); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+  var lastFit = '';
   function render(changed) {
     elA.textContent = state.A;
     elB.textContent = state.B;
@@ -645,7 +658,9 @@ body {
     $('btnHit').disabled = state.B <= 0;
     $('btnMiss').disabled = state.A - state.B <= 0;
     $('btnUndo').disabled = !state.hist.length;
-    fitAll();
+    // 桁数が変わったときだけ文字サイズを測り直す（毎回測ると重いため）
+    var fk = String(state.A).length + ',' + String(state.B).length + ',' + elC.textContent.length;
+    if (fk !== lastFit) { lastFit = fk; fitAll(); }
     if (changed) { bump(elA); if (changed === 'hit') bump(elB); bump(elC); }
   }
 
@@ -748,33 +763,40 @@ body {
 </script>
 <script>
 (function () {
+  // 夜景背景（軽量版）：動かない部分（空・ビル・窓）は1回だけ描き、
+  // 星のまたたき・光の玉・点滅灯だけを別の透明キャンバスに軽く描き直す
   var cv = document.getElementById('nightBg'); if (!cv || !cv.getContext) return;
-  var ctx = cv.getContext('2d');
+  var fx = document.getElementById('nightFx');
+  var ctx = cv.getContext('2d'), fctx = fx ? fx.getContext('2d') : null;
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var W, H, dpr, base, stars, bokeh, flick;
+  var W = 0, H = 0, stars = [], bokeh = [], flick = [], sprites = {}, ready = false;
   function rnd(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+  function sprite(key, rgb, size, soft) { // 光の玉・点滅灯の画像を事前に1回だけ作る
+    if (sprites[key]) return sprites[key];
+    var c = document.createElement('canvas'); c.width = c.height = size; var g = c.getContext('2d');
+    var gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gr.addColorStop(0, 'rgba(' + rgb + ',1)'); gr.addColorStop(soft, 'rgba(' + rgb + ',.6)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+    g.fillStyle = gr; g.fillRect(0, 0, size, size); sprites[key] = c; return c;
+  }
   function build() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
-    if (W < 2 || H < 2) { base = null; return false; } // 画面サイズが決まる前は描かない
+    if (W < 2 || H < 2) { ready = false; return; }
+    // 静止部分は画素数に上限を設けて描く（大画面の端末で重くならないように）
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var maxPx = 2600000; if (W * H * dpr * dpr > maxPx) dpr = Math.sqrt(maxPx / (W * H));
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    var b = ctx; b.setTransform(dpr, 0, 0, dpr, 0, 0);
     var r = rnd(20261012);
-    base = document.createElement('canvas'); base.width = cv.width; base.height = cv.height;
-    var b = base.getContext('2d'); b.scale(dpr, dpr);
-    // 空
     var sky = b.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, '#070b1f'); sky.addColorStop(.45, '#141a42'); sky.addColorStop(.72, '#3a2358'); sky.addColorStop(.86, '#7a3a5e'); sky.addColorStop(1, '#2a1636');
     b.fillStyle = sky; b.fillRect(0, 0, W, H);
-    // 地平線の街明かりの照り返し
     var glow = b.createRadialGradient(W * .5, H * .95, 0, W * .5, H * .95, W * .75);
     glow.addColorStop(0, 'rgba(255,190,110,.45)'); glow.addColorStop(.4, 'rgba(255,120,150,.18)'); glow.addColorStop(1, 'rgba(255,120,150,0)');
     b.fillStyle = glow; b.fillRect(0, 0, W, H);
-    // 遠くの電波塔
     var tx = W * .63, ty = H * .38;
     b.fillStyle = '#1a1433'; b.beginPath(); b.moveTo(tx - 14, H); b.lineTo(tx - 3, ty); b.lineTo(tx + 3, ty); b.lineTo(tx + 14, H); b.fill();
     b.fillRect(tx - 1, ty - 40, 2, 40);
     flick = [{ x: tx, y: ty - 40, c: '255,80,80', s: 3, p: 0 }];
-    // ビル群（奥→手前）
     var layers = [
       { top: .55, min: .08, max: .28, col: '#1d1840', win: .35, wa: .55 },
       { top: .62, min: .06, max: .26, col: '#140f2e', win: .45, wa: .8 },
@@ -786,12 +808,10 @@ body {
       while (x < W + 10) {
         var bw = 26 + r() * (60 + li * 20);
         var bh = H * (L.min + r() * (L.max - L.min));
-        var by = H * L.top + (H * (1 - L.top) - bh) * 0 - bh + H * (1 - L.top) * .2;
-        by = Math.min(by, H * .9);
+        var by = Math.min(H * L.top - bh + H * (1 - L.top) * .2, H * .9);
         b.fillStyle = L.col; b.fillRect(x, by, bw, H - by);
         if (r() < .25) { b.fillRect(x + bw * .4, by - 14, bw * .2, 14); }
-        if (r() < .3) flick.push({ x: x + bw / 2, y: by - (r() < .5 ? 16 : 2), c: '255,70,70', s: 2, p: r() * 6 });
-        // 窓
+        if (r() < .3 && flick.length < 24) flick.push({ x: x + bw / 2, y: by - (r() < .5 ? 16 : 2), c: '255,70,70', s: 2, p: r() * 6 });
         var ws = 3 + li, gap = 4 + li;
         for (var wy = by + 6; wy < H - 4; wy += ws + gap) {
           for (var wx = x + 4; wx < x + bw - ws - 2; wx += ws + gap) {
@@ -799,60 +819,55 @@ body {
               var c = wins[Math.floor(r() * wins.length)];
               b.fillStyle = 'rgba(' + c + ',' + (L.wa * (.35 + r() * .65)).toFixed(2) + ')';
               b.fillRect(wx, wy, ws, ws * 1.3);
-              if (r() < .012) flick.push({ x: wx + ws / 2, y: wy + ws / 2, c: c, s: ws * 2.2, p: r() * 6, win: 1 });
+              if (r() < .012 && flick.length < 60) flick.push({ x: wx + ws / 2, y: wy + ws / 2, c: c, s: ws * 2.2, p: r() * 6, win: 1 });
             }
           }
         }
         x += bw + r() * 6;
       }
     });
-    // 手前のもや
     var haze = b.createLinearGradient(0, H * .75, 0, H);
     haze.addColorStop(0, 'rgba(10,8,25,0)'); haze.addColorStop(1, 'rgba(10,8,25,.55)');
     b.fillStyle = haze; b.fillRect(0, H * .75, W, H * .25);
-    // 星
+    // 動く部分の準備（描く細かさは等倍。数も控えめに）
     stars = [];
-    for (var i = 0; i < 140; i++) stars.push({ x: r() * W, y: r() * H * .55, s: .4 + r() * 1.4, p: r() * 6.28, v: .6 + r() * 1.8 });
-    // 光の玉（ボケ）
+    for (var i = 0; i < 110; i++) stars.push({ x: r() * W, y: r() * H * .55, s: .6 + r() * 1.4, p: r() * 6.28, v: .6 + r() * 1.8 });
     bokeh = [];
     var bc = ['255,205,120', '255,150,190', '160,200,255', '255,235,180'];
-    for (var j = 0; j < 26; j++) bokeh.push({ x: r() * W, y: H * (.35 + r() * .65), rad: 10 + r() * 38, c: bc[Math.floor(r() * bc.length)], a: .08 + r() * .16, vy: .08 + r() * .25, vx: (r() - .5) * .12, p: r() * 6.28 });
+    for (var j = 0; j < 22; j++) bokeh.push({ x: r() * W, y: H * (.35 + r() * .65), rad: 10 + r() * 38, c: bc[Math.floor(r() * bc.length)], a: .08 + r() * .16, vy: .12 + r() * .35, vx: (r() - .5) * .18, p: r() * 6.28 });
+    flick.forEach(function (f) { f.img = sprite('f' + f.c, f.c, 32, .25); });
+    bokeh.forEach(function (o) { o.img = sprite('b' + o.c, o.c, 64, .7); });
+    if (fx) { fx.width = W; fx.height = H; }
+    ready = true;
   }
   function frame(t) {
-    if (!base || !base.width || !base.height) { if (window.innerWidth > 1 && window.innerHeight > 1) build(); if (!base) return; }
-    var s = t / 1000;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(base, 0, 0);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 星のまたたき
+    if (!ready) { build(); if (!ready) return; }
+    if (!fctx) return;
+    var s = t / 1000, g = fctx;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#fffaeb';
     for (var i = 0; i < stars.length; i++) {
-      var st = stars[i], a = .35 + .65 * Math.abs(Math.sin(s * st.v + st.p));
-      ctx.fillStyle = 'rgba(255,250,235,' + a.toFixed(2) + ')';
-      ctx.beginPath(); ctx.arc(st.x, st.y, st.s, 0, 6.283); ctx.fill();
-      if (st.s > 1.5 && a > .9) { ctx.fillRect(st.x - st.s * 3, st.y - .3, st.s * 6, .6); ctx.fillRect(st.x - .3, st.y - st.s * 3, .6, st.s * 6); }
+      var st = stars[i], a = .3 + .7 * Math.abs(Math.sin(s * st.v + st.p));
+      g.globalAlpha = a; var z = st.s * 1.6; g.fillRect(st.x - z / 2, st.y - z / 2, z, z);
+      if (st.s > 1.6 && a > .92) { g.fillRect(st.x - st.s * 3, st.y - .3, st.s * 6, .6); g.fillRect(st.x - .3, st.y - st.s * 3, .6, st.s * 6); }
     }
-    // 航空障害灯・きらめく窓
-    ctx.globalCompositeOperation = 'lighter';
+    g.globalCompositeOperation = 'lighter';
     for (var k = 0; k < flick.length; k++) {
       var f = flick[k], fa = f.win ? .5 + .5 * Math.sin(s * 2 + f.p) : (Math.sin(s * 2.4 + f.p) > .3 ? 1 : .15);
-      var g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.s * 3);
-      g.addColorStop(0, 'rgba(' + f.c + ',' + (.9 * fa).toFixed(2) + ')'); g.addColorStop(1, 'rgba(' + f.c + ',0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, f.s * 3, 0, 6.283); ctx.fill();
+      var d = f.s * 6; g.globalAlpha = .9 * fa; g.drawImage(f.img, f.x - d / 2, f.y - d / 2, d, d);
     }
-    // ボケ
     for (var j = 0; j < bokeh.length; j++) {
-      var bo = bokeh[j];
-      if (!reduce) { bo.y -= bo.vy; bo.x += bo.vx; if (bo.y < -bo.rad) { bo.y = H + bo.rad; } if (bo.x < -bo.rad) bo.x = W + bo.rad; if (bo.x > W + bo.rad) bo.x = -bo.rad; }
-      var ba = bo.a * (.7 + .3 * Math.sin(s + bo.p));
-      var gb = ctx.createRadialGradient(bo.x, bo.y, 0, bo.x, bo.y, bo.rad);
-      gb.addColorStop(0, 'rgba(' + bo.c + ',' + ba.toFixed(3) + ')'); gb.addColorStop(.7, 'rgba(' + bo.c + ',' + (ba * .6).toFixed(3) + ')'); gb.addColorStop(1, 'rgba(' + bo.c + ',0)');
-      ctx.fillStyle = gb; ctx.beginPath(); ctx.arc(bo.x, bo.y, bo.rad, 0, 6.283); ctx.fill();
+      var o = bokeh[j];
+      if (!reduce) { o.y -= o.vy; o.x += o.vx; if (o.y < -o.rad) o.y = H + o.rad; if (o.x < -o.rad) o.x = W + o.rad; if (o.x > W + o.rad) o.x = -o.rad; }
+      g.globalAlpha = o.a * (.7 + .3 * Math.sin(s + o.p)); var dd = o.rad * 2;
+      g.drawImage(o.img, o.x - o.rad, o.y - o.rad, dd, dd);
     }
-    ctx.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
-  var last = 0;
-  function loop(t) { if (t - last > 33) { frame(t); last = t; } requestAnimationFrame(loop); }
-  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { build(); frame(performance.now()); }, 150); });
+  var last = 0, running = true;
+  function loop(t) { if (running && t - last > 50) { frame(t); last = t; } requestAnimationFrame(loop); } // 約20コマ/秒
+  document.addEventListener('visibilitychange', function () { running = !document.hidden; });
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { ready = false; build(); frame(performance.now()); }, 200); });
   build();
   if (reduce) frame(0); else requestAnimationFrame(loop);
 })();
@@ -920,7 +935,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-23c';
+  var VER = '2026-10-23d';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
