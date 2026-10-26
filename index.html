@@ -459,6 +459,13 @@ body {
 .ls-bg, .ls-char, .ls-hand, .ls-shine { will-change: transform; backface-visibility: hidden; }
 .frac-num, .frac-den, .percent { will-change: transform; }
 @media (prefers-reduced-motion: no-preference) { .bump { animation-duration: .2s; } }
+
+/* 左側（ロゴ・日付・時計）をまとめてゆっくり上下させる：上→下 約3秒、下→上 約3秒 */
+.logo { will-change: transform; }
+@media (prefers-reduced-motion: no-preference) {
+  .logo { animation: logoFloat 3s ease-in-out infinite alternate; }
+  @keyframes logoFloat { from { transform: translateY(-2.5vh); } to { transform: translateY(2.5vh); } }
+}
 </style>
 </head>
 <body>
@@ -935,7 +942,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-23d';
+  var VER = '2026-10-27a';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
