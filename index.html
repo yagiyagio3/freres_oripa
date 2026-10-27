@@ -464,7 +464,7 @@ body {
 .logo { will-change: transform; }
 @media (prefers-reduced-motion: no-preference) {
   .logo { animation: logoFloat 3s ease-in-out infinite alternate; }
-  @keyframes logoFloat { from { transform: translateY(-2.5vh); } to { transform: translateY(2.5vh); } }
+  @keyframes logoFloat { from { transform: translateY(calc(var(--float, 2.5vh) * -1)); } to { transform: translateY(var(--float, 2.5vh)); } }
 }
 </style>
 </head>
@@ -942,7 +942,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-27a';
+  var VER = '2026-10-27b';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
@@ -981,6 +981,32 @@ body {
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
 })();
 </script>
+<script>
+(function () {
+  // 左側の上下の動きを、画面の上端・下端の近くまで届く幅に自動で合わせる
+  var col = document.querySelector('.logo'); if (!col) return;
+  var MARGIN = 6; // 画面の端に残す余白（px）
+  function calc() {
+    var ty = 0;
+    try { var tf = getComputedStyle(col).transform; if (tf && tf !== 'none') ty = new DOMMatrix(tf).m42; } catch (e) {}
+    var top = Infinity, bottom = -Infinity;
+    Array.prototype.forEach.call(col.children, function (el) {
+      if (el.hidden || !el.offsetHeight) return;
+      var r = el.getBoundingClientRect(); top = Math.min(top, r.top); bottom = Math.max(bottom, r.bottom);
+    });
+    if (!isFinite(top)) return;
+    top -= ty; bottom -= ty; // 動いていないときの位置
+    var amp = Math.max(0, Math.min(top - MARGIN, window.innerHeight - bottom - MARGIN));
+    col.style.setProperty('--float', amp.toFixed(1) + 'px');
+  }
+  var t; function later() { clearTimeout(t); t = setTimeout(calc, 200); }
+  window.addEventListener('resize', later);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+  document.getElementById('btnOk').addEventListener('click', later); // ロゴを切り替えたとき
+  calc(); setTimeout(calc, 800);
+})();
+</script>
+
 
 
 
