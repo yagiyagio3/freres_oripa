@@ -489,6 +489,19 @@ body {
 .switch[aria-checked="true"] .sw-on { opacity: 1; }
 .switch[aria-checked="true"] .sw-off { opacity: 0; }
 .switch:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* 時計：枠をなくして文字を大きく。濃紺のフチと影で夜景の上でも読みやすく */
+.clock {
+  border: none !important; background: none !important; padding: 0 !important; border-radius: 0;
+  font-size: clamp(30px, min(9vw, 13vh), 120px);
+  line-height: 1.05; letter-spacing: .03em;
+  text-shadow: 3.0px 0.0px 0 #0a0f26, 2.6px 1.5px 0 #0a0f26, 1.5px 2.6px 0 #0a0f26, 0.0px 3.0px 0 #0a0f26, -1.5px 2.6px 0 #0a0f26, -2.6px 1.5px 0 #0a0f26, -3.0px 0.0px 0 #0a0f26, -2.6px -1.5px 0 #0a0f26, -1.5px -2.6px 0 #0a0f26, -0.0px -3.0px 0 #0a0f26, 1.5px -2.6px 0 #0a0f26, 2.6px -1.5px 0 #0a0f26, 0 4px 10px rgba(5,8,22,.9), 0 0 18px rgba(5,8,22,.8);
+  overflow: visible;
+}
+
+/* 時計の数字を縦に1.5倍に伸ばす（伸びた分の上下の余白も確保） */
+.clock { padding-top: .3em !important; padding-bottom: .42em !important; margin-top: calc(-1 * clamp(4px, 1.2vh, 12px)); }
+.clock-t { transform: scaleY(1.8); transform-origin: 50% 50%; }
 </style>
 </head>
 <body>
@@ -975,7 +988,7 @@ body {
     var size = parseFloat(cs.fontSize);
     var avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     var need = t.getBoundingClientRect().width;
-    if (need > 0 && need > avail * 0.92) el.style.fontSize = (size * avail * 0.92 / need).toFixed(2) + 'px';
+    if (need > 0 && need > avail * 0.97) el.style.fontSize = (size * avail * 0.97 / need).toFixed(2) + 'px';
   }
   var ft; window.addEventListener('resize', function () { clearTimeout(ft); ft = setTimeout(fit, 120); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
@@ -985,7 +998,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-30b';
+  var VER = '2026-10-30e';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
