@@ -335,7 +335,7 @@ body {
   letter-spacing: .06em;
   color: #f6e7c1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 2.0px 0.0px 0 #0a0f26, 1.4px 1.4px 0 #0a0f26, 0.0px 2.0px 0 #0a0f26, -1.4px 1.4px 0 #0a0f26, -2.0px 0.0px 0 #0a0f26, -1.4px -1.4px 0 #0a0f26, -0.0px -2.0px 0 #0a0f26, 1.4px -1.4px 0 #0a0f26, 4.0px 0.0px 0 #0a0f26, 3.7px 1.5px 0 #0a0f26, 2.8px 2.8px 0 #0a0f26, 1.5px 3.7px 0 #0a0f26, 0.0px 4.0px 0 #0a0f26, -1.5px 3.7px 0 #0a0f26, -2.8px 2.8px 0 #0a0f26, -3.7px 1.5px 0 #0a0f26, -4.0px 0.0px 0 #0a0f26, -3.7px -1.5px 0 #0a0f26, -2.8px -2.8px 0 #0a0f26, -1.5px -3.7px 0 #0a0f26, -0.0px -4.0px 0 #0a0f26, 1.5px -3.7px 0 #0a0f26, 2.8px -2.8px 0 #0a0f26, 3.7px -1.5px 0 #0a0f26, 0 4px 8px rgba(5,8,22,.9), 0 0 16px rgba(5,8,22,.85);
+  text-shadow: 3.0px 0.0px 0 #0a0f26, 2.1px 2.1px 0 #0a0f26, 0.0px 3.0px 0 #0a0f26, -2.1px 2.1px 0 #0a0f26, -3.0px 0.0px 0 #0a0f26, -2.1px -2.1px 0 #0a0f26, -0.0px -3.0px 0 #0a0f26, 2.1px -2.1px 0 #0a0f26, 0 3px 8px rgba(5,8,22,.85);
   margin-bottom: calc(-1 * clamp(2px, 1vh, 10px));
 }
 .date-t { display: inline-block; }
@@ -462,13 +462,16 @@ body {
 
 /* 左側（ロゴ・日付・時計）をまとめてゆっくり上下させる：上→下 約3秒、下→上 約3秒 */
 .logo { will-change: transform; }
-@media (prefers-reduced-motion: no-preference) {
-  .logo { animation: logoFloat 3s ease-in-out infinite alternate; }
-  @keyframes logoFloat { from { transform: translateY(calc(var(--float, 2.5vh) * -1)); } to { transform: translateY(var(--float, 2.5vh)); } }
-}
+
+/* 軽量化（2）：時計・日付は自分の層で更新し、ロゴの円は軽い方法で切り抜く */
+.clock, .date { will-change: transform; contain: paint; }
+.ls-clip { clip-path: none !important; -webkit-clip-path: none !important; border-radius: 50%; overflow: hidden; transform: translateZ(0); }
+/* Android端末では、目立たない飾り（光の筋・星のまたたき）を省いて動きを優先する */
+.lite .ls-shine, .lite .ls-star { display: none !important; }
 </style>
 </head>
 <body>
+<script>if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add('lite');</script>
 <canvas id="nightBg" aria-hidden="true"></canvas>
 <canvas id="nightFx" aria-hidden="true"></canvas>
 <main class="app">
@@ -838,10 +841,11 @@ body {
     b.fillStyle = haze; b.fillRect(0, H * .75, W, H * .25);
     // 動く部分の準備（描く細かさは等倍。数も控えめに）
     stars = [];
-    for (var i = 0; i < 110; i++) stars.push({ x: r() * W, y: r() * H * .55, s: .6 + r() * 1.4, p: r() * 6.28, v: .6 + r() * 1.8 });
+    var LITE = document.documentElement.classList.contains('lite');
+    for (var i = 0; i < (LITE ? 60 : 110); i++) stars.push({ x: r() * W, y: r() * H * .55, s: .6 + r() * 1.4, p: r() * 6.28, v: .6 + r() * 1.8 });
     bokeh = [];
     var bc = ['255,205,120', '255,150,190', '160,200,255', '255,235,180'];
-    for (var j = 0; j < 22; j++) bokeh.push({ x: r() * W, y: H * (.35 + r() * .65), rad: 10 + r() * 38, c: bc[Math.floor(r() * bc.length)], a: .08 + r() * .16, vy: .12 + r() * .35, vx: (r() - .5) * .18, p: r() * 6.28 });
+    for (var j = 0; j < (LITE ? 12 : 22); j++) bokeh.push({ x: r() * W, y: H * (.35 + r() * .65), rad: 10 + r() * 38, c: bc[Math.floor(r() * bc.length)], a: .08 + r() * .16, vy: .12 + r() * .35, vx: (r() - .5) * .18, p: r() * 6.28 });
     flick.forEach(function (f) { f.img = sprite('f' + f.c, f.c, 32, .25); });
     bokeh.forEach(function (o) { o.img = sprite('b' + o.c, o.c, 64, .7); });
     if (fx) { fx.width = W; fx.height = H; }
@@ -872,7 +876,8 @@ body {
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   var last = 0, running = true;
-  function loop(t) { if (running && t - last > 50) { frame(t); last = t; } requestAnimationFrame(loop); } // 約20コマ/秒
+  var STEP = document.documentElement.classList.contains('lite') ? 66 : 50; // Androidは約15コマ/秒、その他は約20コマ/秒
+  function loop(t) { if (running && t - last > STEP) { frame(t); last = t; } requestAnimationFrame(loop); }
   document.addEventListener('visibilitychange', function () { running = !document.hidden; });
   var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { ready = false; build(); frame(performance.now()); }, 200); });
   build();
@@ -942,7 +947,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-27b';
+  var VER = '2026-10-30a';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
@@ -986,9 +991,13 @@ body {
   // 左側の上下の動きを、画面の上端・下端の近くまで届く幅に自動で合わせる
   var col = document.querySelector('.logo'); if (!col) return;
   var MARGIN = 6; // 画面の端に残す余白（px）
+  var anim = null, lastAmp = -1;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function calc() {
     var ty = 0;
     try { var tf = getComputedStyle(col).transform; if (tf && tf !== 'none') ty = new DOMMatrix(tf).m42; } catch (e) {}
+    if (anim) { anim.pause(); }
+    try { var tf2 = getComputedStyle(col).transform; ty = (tf2 && tf2 !== 'none') ? new DOMMatrix(tf2).m42 : 0; } catch (e) {}
     var top = Infinity, bottom = -Infinity;
     Array.prototype.forEach.call(col.children, function (el) {
       if (el.hidden || !el.offsetHeight) return;
@@ -997,7 +1006,13 @@ body {
     if (!isFinite(top)) return;
     top -= ty; bottom -= ty; // 動いていないときの位置
     var amp = Math.max(0, Math.min(top - MARGIN, window.innerHeight - bottom - MARGIN));
-    col.style.setProperty('--float', amp.toFixed(1) + 'px');
+    amp = Math.round(amp);
+    if (amp === lastAmp) { if (anim) anim.play(); return; } lastAmp = amp;
+    // 移動はWeb Animationsで行う（端末の描画専用の仕組みで動くので、処理が重くなりにくい）
+    if (anim) anim.cancel();
+    if (reduce || !col.animate) return;
+    anim = col.animate([{ transform: 'translate3d(0,' + (-amp) + 'px,0)' }, { transform: 'translate3d(0,' + amp + 'px,0)' }],
+      { duration: 3000, easing: 'ease-in-out', iterations: Infinity, direction: 'alternate' });
   }
   var t; function later() { clearTimeout(t); t = setTimeout(calc, 200); }
   window.addEventListener('resize', later);
