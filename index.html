@@ -468,6 +468,27 @@ body {
 .ls-clip { clip-path: none !important; -webkit-clip-path: none !important; border-radius: 50%; overflow: hidden; transform: translateZ(0); }
 /* Android端末では、目立たない飾り（光の筋・星のまたたき）を省いて動きを優先する */
 .lite .ls-shine, .lite .ls-star { display: none !important; }
+
+/* ON/OFFスライドスイッチ */
+.dialog .field.field-wide { grid-template-columns: minmax(0, 1fr) auto; }
+.dialog .field.field-wide .field-label { white-space: normal; }
+.switch {
+  position: relative; width: 88px; height: 36px; border-radius: 18px; border: 2px solid #b8b09a;
+  background: #d9d3c2; cursor: pointer; padding: 0; transition: background .2s, border-color .2s; touch-action: manipulation;
+  font: 800 13px var(--font-body); letter-spacing: .04em;
+}
+.switch .sw-knob {
+  position: absolute; top: 2px; left: 2px; width: 28px; height: 28px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s;
+}
+.switch .sw-text { position: absolute; top: 50%; transform: translateY(-50%); transition: opacity .2s; }
+.switch .sw-on { left: 12px; color: #fff; opacity: 0; }
+.switch .sw-off { right: 11px; color: #5b5848; opacity: 1; }
+.switch[aria-checked="true"] { background: #2f8a5c; border-color: #2f8a5c; }
+.switch[aria-checked="true"] .sw-knob { transform: translateX(52px); }
+.switch[aria-checked="true"] .sw-on { opacity: 1; }
+.switch[aria-checked="true"] .sw-off { opacity: 0; }
+.switch:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -545,6 +566,12 @@ body {
         <button type="button" class="radio" id="logoBtnA" role="radio" aria-checked="true"><span class="dot"></span>フレリア</button>
         <button type="button" class="radio" id="logoBtnB" role="radio" aria-checked="false"><span class="dot"></span>はまちゃん</button>
       </div>
+    </div>
+    <div class="field field-wide">
+      <span class="field-label" id="swingLabel">ロゴと時計のスイングムーヴ</span>
+      <button type="button" class="switch" id="swingSwitch" role="switch" aria-checked="true" aria-labelledby="swingLabel">
+        <span class="sw-text sw-on">ON</span><span class="sw-text sw-off">OFF</span><span class="sw-knob"></span>
+      </button>
     </div>
     <p class="error" id="formError"></p>
     <div class="actions">
@@ -745,8 +772,16 @@ body {
     else if (e.key === 'Enter') { e.preventDefault(); doRegister(); }
     else if (e.key === 'Escape') { $('settings').hidden = true; }
   });
+  // スイングムーヴ（左側の上下の動き）のON/OFF。初期値はON、端末内に保存
+  var SWING_KEY = 'kuji-board-swing';
+  var swing = true, pickSwing = true;
+  try { if (localStorage.getItem(SWING_KEY) === 'off') swing = false; } catch (e) {}
+  window.kujiSwingOn = swing;
+  function showSwing() { $('swingSwitch').setAttribute('aria-checked', pickSwing ? 'true' : 'false'); }
+  $('swingSwitch').addEventListener('click', function () { pickSwing = !pickSwing; showSwing(); });
   $('btnSettings').addEventListener('click', function () {
     pick = logo; showPick();
+    pickSwing = swing; showSwing();
     vals.total = String(state.initA); vals.win = String(state.initB); err.textContent = '';
     select('total');
     $('settings').hidden = false;
@@ -761,6 +796,9 @@ body {
     if (b > a) { select('win'); err.textContent = '当たり数はくじの全数以下にしてください。'; return; }
     state = { A: a, B: b, initA: a, initB: b, hist: [] };
     logo = pick;
+    swing = pickSwing; window.kujiSwingOn = swing;
+    try { localStorage.setItem(SWING_KEY, swing ? 'on' : 'off'); } catch (e) {}
+    if (window.kujiSetSwing) window.kujiSetSwing(swing);
     try { localStorage.setItem(LOGO_KEY, logo); } catch (e) {}
     applyLogo();
     save(); render('hit');
@@ -947,7 +985,7 @@ body {
 </script>
 <script>
 (function () {
-  var VER = '2026-10-30a';
+  var VER = '2026-10-30b';
   var v = document.getElementById('verInfo');
   function upd() {
     if (!v) return;
@@ -1007,6 +1045,7 @@ body {
     top -= ty; bottom -= ty; // 動いていないときの位置
     var amp = Math.max(0, Math.min(top - MARGIN, window.innerHeight - bottom - MARGIN));
     amp = Math.round(amp);
+    if (window.kujiSwingOn === false) { if (anim) { anim.cancel(); anim = null; } lastAmp = -1; return; }
     if (amp === lastAmp) { if (anim) anim.play(); return; } lastAmp = amp;
     // 移動はWeb Animationsで行う（端末の描画専用の仕組みで動くので、処理が重くなりにくい）
     if (anim) anim.cancel();
@@ -1018,6 +1057,7 @@ body {
   window.addEventListener('resize', later);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
   document.getElementById('btnOk').addEventListener('click', later); // ロゴを切り替えたとき
+  window.kujiSetSwing = function (on) { if (anim) { anim.cancel(); anim = null; } lastAmp = -1; calc(); };
   calc(); setTimeout(calc, 800);
 })();
 </script>
