@@ -87,13 +87,33 @@ button:disabled{opacity:.3;cursor:default}
 .ok{background:var(--ink);border:2px solid var(--ink);color:#fff}
 .danger{background:var(--red);border:2px solid var(--red);color:#fff}
 
-/* 横向き時 */
-.rotate{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;z-index:20;font-size:22px;font-weight:900;text-align:center;padding:20px}
-@media (orientation:landscape) and (max-height:520px){.rotate{display:flex}}
+/* 縦向き：列ラッパーは無効化 */
+.col{display:contents}
+
+/* 横向き：左列（領域1〜5）・右列（領域6〜時計） */
+@media (orientation:landscape) and (max-height:520px){
+  .app{max-width:none;flex-direction:row;gap:14px;
+    padding:0 max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left));}
+  .col{display:flex;flex-direction:column;height:100%;min-width:0}
+  .colL{flex:0 0 46%}
+  .colR{flex:1 1 0}
+  .r1{height:11%;padding:1.6cqh 0 1cqh;}
+  .r1 button{font-size:3.6cqh}
+  .r2{height:21%;margin-top:1cqh}
+  .lbl{font-size:5cqh}
+  .r3{height:22%;padding:1.2cqh 0}
+  .r4,.r5{height:22%;padding:1.2cqh 0}
+  .r4 button,.r5 button{font-size:9.5cqh}
+  .r6{height:66%;padding:1.6cqh 0 1cqh}
+  .num{font-size:7.5cqh}
+  .r7{height:25%;margin-top:.6cqh}
+  .credit{height:8%;font-size:3cqh}
+}
 </style>
 </head>
 <body>
 <div class="app" id="app">
+ <div class="col colL">
   <div class="r1">
     <button id="undoBtn">←１つ戻す</button>
     <button id="setBtn">設定</button>
@@ -118,10 +138,13 @@ button:disabled{opacity:.3;cursor:default}
   <div class="r4"><button class="hit" id="hitBtn">当たり</button></div>
   <div class="r5"><button class="miss" id="missBtn">ハズレ</button></div>
 
+ </div>
+ <div class="col colR">
   <div class="r6" id="grid"></div>
 
   <div class="r7" id="r7"><span id="clock">00:00:00</span></div>
   <div class="credit">produced by Matomaru Inc.<span class="ver" id="ver"></span></div>
+ </div>
 </div>
 
 <!-- 設定 -->
@@ -144,10 +167,9 @@ button:disabled{opacity:.3;cursor:default}
   </div>
 </div>
 
-<div class="rotate">縦向きでご使用ください</div>
 
 <script>
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 
 /* ===== 更新チェック（起動時・復帰時に最新版があれば即リロード） ===== */
 async function checkUpdate(){
@@ -223,14 +245,16 @@ function fit(el, box, maxPx, ratio){
   const limit = box.clientWidth * ratio;
   while(el.offsetWidth > limit && s > 8){ s *= 0.94; el.style.fontSize = s + 'px'; }
 }
+const LAND = window.matchMedia('(orientation:landscape) and (max-height:520px)');
+LAND.addEventListener && LAND.addEventListener('change', ()=>setTimeout(fitAll,50));
 function fitAll(){
-  const H = app.clientHeight;
-  fit($('counter'), $('r2'), H * 0.10, 0.98);
-  fit($('frac'), $('box1'), H * 0.07, 0.86);
-  fit($('pct'),  $('box2'), H * 0.07, 0.86);
+  const H = app.clientHeight, k = LAND.matches ? 1.9 : 1;
+  fit($('counter'), $('r2'), H * 0.10 * k, 0.96);
+  fit($('frac'), $('box1'), H * 0.07 * k, 0.86);
+  fit($('pct'),  $('box2'), H * 0.07 * k, 0.86);
   const same = Math.min(parseFloat($('frac').style.fontSize), parseFloat($('pct').style.fontSize)) + 'px';
   $('frac').style.fontSize = same; $('pct').style.fontSize = same;
-  fit($('clock'), $('r7'), H * 0.09, 0.9);
+  fit($('clock'), $('r7'), H * 0.09 * k, 0.9);
 }
 window.addEventListener('resize', fitAll);
 
