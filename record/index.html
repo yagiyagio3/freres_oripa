@@ -16,7 +16,7 @@
 <style>
 :root{--pink:#ff2d87;--blue:#1e5bff;--red:#e60012;--ink:#111;}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#fdf2f7;overflow:hidden;overscroll-behavior:none;
+html,body{margin:0;height:100%;position:fixed;inset:0;width:100%;background:#fdf2f7;overflow:hidden;overscroll-behavior:none;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 body{background:linear-gradient(170deg,#ffe3ef 0%,#fbf4ff 45%,#e3edff 100%) fixed;font-family:-apple-system,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Helvetica Neue",Arial,sans-serif;color:var(--ink);}
 button{font-family:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;margin:0;padding:0;cursor:pointer;}
@@ -169,7 +169,7 @@ button:disabled{opacity:.3;cursor:default}
 
 
 <script>
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 
 /* ===== 更新チェック（起動時・復帰時に最新版があれば即リロード） ===== */
 async function checkUpdate(){
@@ -246,7 +246,7 @@ function fit(el, box, maxPx, ratio){
   while(el.offsetWidth > limit && s > 8){ s *= 0.94; el.style.fontSize = s + 'px'; }
 }
 const LAND = window.matchMedia('(orientation:landscape) and (max-height:520px)');
-LAND.addEventListener && LAND.addEventListener('change', ()=>setTimeout(fitAll,50));
+LAND.addEventListener && LAND.addEventListener('change', ()=>scheduleRelayout());
 function fitAll(){
   const H = app.clientHeight, k = LAND.matches ? 1.9 : 1;
   fit($('counter'), $('r2'), H * 0.10 * k, 0.96);
@@ -256,7 +256,20 @@ function fitAll(){
   $('frac').style.fontSize = same; $('pct').style.fontSize = same;
   fit($('clock'), $('r7'), H * 0.09 * k, 0.9);
 }
-window.addEventListener('resize', fitAll);
+/* 画面回転後のタップ位置ズレ対策（iOSで回転後に残るスクロール位置・古いレイアウトを解消） */
+function relayout(){
+  try{ window.scrollTo(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }catch(e){}
+  app.style.display = 'none'; void app.offsetHeight; app.style.display = '';
+  fitAll();
+}
+let relayoutTimers = [];
+function scheduleRelayout(){
+  relayoutTimers.forEach(clearTimeout);
+  relayoutTimers = [0, 120, 350, 700].map(t => setTimeout(relayout, t));
+}
+window.addEventListener('resize', scheduleRelayout);
+window.addEventListener('orientationchange', scheduleRelayout);
+if(window.visualViewport) window.visualViewport.addEventListener('resize', scheduleRelayout);
 
 /* ===== 操作 ===== */
 function nudge(){
