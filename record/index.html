@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="抽選記録">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>抽選記録</title>
+<style>
+:root{--pink:#ff2d87;--blue:#1e5bff;--red:#e60012;--ink:#111;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#fdf2f7;overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
+body{background:linear-gradient(170deg,#ffe3ef 0%,#fbf4ff 45%,#e3edff 100%) fixed;font-family:-apple-system,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Helvetica Neue",Arial,sans-serif;color:var(--ink);}
+button{font-family:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;margin:0;padding:0;cursor:pointer;}
+button:disabled{opacity:.3;cursor:default}
+
+.app{position:fixed;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);left:0;right:0;
+  margin:0 auto;max-width:520px;padding:0 10px;display:flex;flex-direction:column;container-type:size;}
+
+/* 領域1：6% */
+.r1{height:6%;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:1cqh 0 .5cqh;}
+.r1 button{border:none;background:linear-gradient(180deg,#3a3f55,#1c1f2e);border-radius:10px;font-weight:800;font-size:2cqh;color:#fff;box-shadow:0 2px 5px rgba(28,31,46,.25);}
+.r1 button:active:not(:disabled){filter:brightness(1.3)}
+#resetBtn{background:linear-gradient(180deg,#ff5a6e,#d9183b)}
+
+/* 領域2：12% */
+.r2{height:11%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:.5cqh 0 0;background:#fff;border-radius:14px;box-shadow:0 3px 10px rgba(80,60,140,.12);}
+.counter{display:inline-flex;align-items:baseline;gap:.12em;white-space:nowrap;line-height:1;}
+.lbl{font-size:3cqh;font-weight:800;color:#333;}
+.big{font-weight:900;-webkit-text-stroke:.035em currentColor;font-variant-numeric:tabular-nums;}
+#a{color:var(--pink)} #b{color:var(--blue)} .slash{color:#888;-webkit-text-stroke:.02em #888}
+
+/* 領域3：12% */
+.r3{height:11%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:.6cqh 0;}
+.box{border:2px solid var(--ink);border-radius:12px;background:linear-gradient(180deg,#fff,#f4f1fa);box-shadow:0 2px 6px rgba(80,60,140,.10);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.box span{font-weight:900;-webkit-text-stroke:.03em var(--ink);white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;}
+
+/* 領域4・5：各10% */
+.r4,.r5{height:10%;padding:.6cqh 0;}
+.r4 button,.r5 button{width:100%;height:100%;border-radius:14px;font-size:5.4cqh;font-weight:900;letter-spacing:.08em;}
+.hit{background:linear-gradient(180deg,#ff6aa8,#ff2d87 55%,#e8106f);color:#fff;border:4px solid #e8106f;box-shadow:0 4px 10px rgba(255,45,135,.35);-webkit-text-stroke:.035em #fff;}
+.miss{background:#fff;color:var(--blue);border:4px solid var(--blue);box-shadow:0 4px 10px rgba(30,91,255,.18);-webkit-text-stroke:.035em var(--blue);}
+.hit.on{animation:blinkHit .5s steps(1) infinite}
+.miss.on{animation:blinkMiss .5s steps(1) infinite}
+@keyframes blinkHit{50%{background:#fff;box-shadow:none;color:var(--pink);-webkit-text-stroke-color:var(--pink)}}
+@keyframes blinkMiss{50%{background:linear-gradient(180deg,#4f80ff,#1e5bff);color:#fff;-webkit-text-stroke-color:#fff}}
+.nudge{animation:nudge .3s}
+@keyframes nudge{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+/* 領域6：35% */
+.r6{height:34%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:6px;padding:.8cqh 0;}
+.num{position:relative;border:2.5px solid var(--ink);background:#fff;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,.10);
+  font-size:4.5cqh;font-weight:900;color:var(--ink);-webkit-text-stroke:.03em var(--ink);font-variant-numeric:tabular-nums;}
+.num:active{background:#f0f0f0}
+.num svg{position:absolute;left:4%;top:4%;width:92%;height:92%;pointer-events:none;}
+
+/* 領域7：15% 時計 */
+.r7{height:12%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:.4cqh;border-radius:14px;background:linear-gradient(135deg,#2a2f45,#151826);box-shadow:0 3px 10px rgba(21,24,38,.3);}
+#clock{display:inline-block;font-weight:900;color:#fff;-webkit-text-stroke:.045em #fff;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+
+.credit{height:3%;display:flex;align-items:center;justify-content:center;font-size:1.6cqh;font-weight:700;letter-spacing:.06em;color:#6b6585;}
+
+/* ポップアップ */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10;padding:20px;}
+.modal.show{display:flex}
+.sheet{background:#fff;border-radius:18px;width:100%;max-width:360px;padding:22px 20px 18px;}
+.sheet h2{margin:0 0 16px;font-size:22px;font-weight:900;text-align:center}
+.field{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.field label{width:5.5em;font-size:20px;font-weight:800}
+.field label.pk{color:var(--pink)} .field label.bl{color:var(--blue)}
+.field input{flex:1;min-width:0;font-size:28px;font-weight:900;padding:8px 12px;border:2px solid var(--ink);border-radius:10px;text-align:right;font-family:inherit;-webkit-user-select:text;user-select:text}
+.msg{min-height:1.4em;color:var(--red);font-size:15px;font-weight:700;text-align:center;margin:0 0 8px}
+.sheet p.q{font-size:18px;font-weight:700;text-align:center;margin:4px 0 20px;line-height:1.5}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns button{height:52px;border-radius:12px;font-size:19px;font-weight:900}
+.cancel{background:#fff;border:2px solid var(--ink);color:var(--ink)}
+.ok{background:var(--ink);border:2px solid var(--ink);color:#fff}
+.danger{background:var(--red);border:2px solid var(--red);color:#fff}
+
+/* 横向き時 */
+.rotate{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;z-index:20;font-size:22px;font-weight:900;text-align:center;padding:20px}
+@media (orientation:landscape) and (max-height:520px){.rotate{display:flex}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="r1">
+    <button id="undoBtn">←１つ戻す</button>
+    <button id="setBtn">設定</button>
+    <button id="resetBtn">リセット</button>
+  </div>
+
+  <div class="r2" id="r2">
+    <div class="counter" id="counter">
+      <span class="lbl">当たり</span>
+      <span class="big" id="a">0</span>
+      <span class="big slash">/</span>
+      <span class="big" id="b">0</span>
+      <span class="lbl">残口数</span>
+    </div>
+  </div>
+
+  <div class="r3">
+    <div class="box" id="box1"><span id="frac">−</span></div>
+    <div class="box" id="box2"><span id="pct">0.0%</span></div>
+  </div>
+
+  <div class="r4"><button class="hit" id="hitBtn">当たり</button></div>
+  <div class="r5"><button class="miss" id="missBtn">ハズレ</button></div>
+
+  <div class="r6" id="grid"></div>
+
+  <div class="r7" id="r7"><span id="clock">00:00:00</span></div>
+  <div class="credit">produced by Matomaru Inc.</div>
+</div>
+
+<!-- 設定 -->
+<div class="modal" id="setModal">
+  <div class="sheet">
+    <h2>設定</h2>
+    <div class="field"><label class="pk" for="inA">当たり</label><input id="inA" type="number" inputmode="numeric" pattern="[0-9]*" min="0"></div>
+    <div class="field"><label class="bl" for="inB">口数</label><input id="inB" type="number" inputmode="numeric" pattern="[0-9]*" min="0"></div>
+    <p class="msg" id="setMsg"></p>
+    <div class="btns"><button class="cancel" id="setCancel">キャンセル</button><button class="ok" id="setOk">登録</button></div>
+  </div>
+</div>
+
+<!-- リセット確認 -->
+<div class="modal" id="resetModal">
+  <div class="sheet">
+    <h2>リセット</h2>
+    <p class="q">当たりと残口数を初期値に戻し、<br>1〜20の記録も消去します。</p>
+    <div class="btns"><button class="cancel" id="resetCancel">キャンセル</button><button class="danger" id="resetOk">リセット</button></div>
+  </div>
+</div>
+
+<div class="rotate">縦向きでご使用ください</div>
+
+<script>
+const APP_VERSION = "2026.11.10-2";
+
+/* ===== 更新チェック（起動時・復帰時に最新版があれば即リロード） ===== */
+async function checkUpdate(){
+  try{
+    const res = await fetch('index.html?t=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const txt = await res.text();
+    const m = txt.match(/APP_VERSION\s*=\s*"([^"]+)"/);
+    if(m && m[1] !== APP_VERSION){
+      let done = null;
+      try{ done = sessionStorage.getItem('reloadedFor'); sessionStorage.setItem('reloadedFor', m[1]); }catch(e){}
+      if(done === m[1]) return; // 反映待ちでの無限リロード防止
+      location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]));
+    }
+  }catch(e){}
+}
+checkUpdate();
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') checkUpdate(); });
+window.addEventListener('pageshow', e=>{ if(e.persisted) checkUpdate(); });
+
+/* ===== データ ===== */
+const KEY = 'kujiRecord.v1';
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+let S = load() || {initA:5, initB:20, a:5, b:20, marks:{}, hist:[]};
+let pending = null; // 'hit' | 'miss' | null
+
+const $ = id => document.getElementById(id);
+const app = $('app');
+
+/* ===== 1〜20ボタン ===== */
+const SVG_CIRCLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e60012" stroke-width="9"/></svg>';
+const SVG_CROSS  = '<svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" stroke="#e60012" stroke-width="10" stroke-linecap="round"/></svg>';
+const grid = $('grid');
+for(let i=1;i<=20;i++){
+  const b = document.createElement('button');
+  b.className = 'num'; b.dataset.n = i;
+  b.innerHTML = '<span>' + i + '</span>';
+  b.addEventListener('click', ()=>pressNumber(i));
+  grid.appendChild(b);
+}
+
+/* ===== 表示 ===== */
+function render(){
+  $('a').textContent = S.a;
+  $('b').textContent = S.b;
+  if(S.a > 0 && S.b > 0){
+    const r = S.b / S.a;
+    $('frac').textContent = '1/' + (Number.isInteger(r) ? r : r.toFixed(1));
+    $('pct').textContent = (S.a / S.b * 100).toFixed(1) + '%';
+  }else{
+    $('frac').textContent = '−';
+    $('pct').textContent = '0.0%';
+  }
+  $('hitBtn').disabled  = !(S.a > 0 && S.b > 0);
+  $('missBtn').disabled = !(S.b - S.a > 0);
+  $('undoBtn').disabled = S.hist.length === 0;
+  $('hitBtn').classList.toggle('on', pending === 'hit');
+  $('missBtn').classList.toggle('on', pending === 'miss');
+  grid.querySelectorAll('.num').forEach(btn=>{
+    const n = btn.dataset.n, m = S.marks[n];
+    const old = btn.querySelector('svg'); if(old) old.remove();
+    if(m) btn.insertAdjacentHTML('beforeend', m === 'hit' ? SVG_CIRCLE : SVG_CROSS);
+  });
+  fitAll();
+}
+
+/* 文字を枠内に最大サイズで収める */
+function fit(el, box, maxPx, ratio){
+  let s = maxPx;
+  el.style.fontSize = s + 'px';
+  const limit = box.clientWidth * ratio;
+  while(el.offsetWidth > limit && s > 8){ s *= 0.94; el.style.fontSize = s + 'px'; }
+}
+function fitAll(){
+  const H = app.clientHeight;
+  fit($('counter'), $('r2'), H * 0.10, 0.98);
+  fit($('frac'), $('box1'), H * 0.07, 0.86);
+  fit($('pct'),  $('box2'), H * 0.07, 0.86);
+  const same = Math.min(parseFloat($('frac').style.fontSize), parseFloat($('pct').style.fontSize)) + 'px';
+  $('frac').style.fontSize = same; $('pct').style.fontSize = same;
+  fit($('clock'), $('r7'), H * 0.09, 0.9);
+}
+window.addEventListener('resize', fitAll);
+
+/* ===== 操作 ===== */
+function nudge(){
+  ['hitBtn','missBtn'].forEach(id=>{
+    const el = $(id); el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge');
+  });
+}
+$('hitBtn').addEventListener('click', ()=>{ pending = (pending === 'hit') ? null : 'hit'; render(); });
+$('missBtn').addEventListener('click', ()=>{ pending = (pending === 'miss') ? null : 'miss'; render(); });
+
+function pressNumber(n){
+  if(!pending){ nudge(); return; }      // ①が未選択
+  if(S.marks[n]) return;                // 記録済みの番号
+  if(pending === 'hit'){
+    if(!(S.a > 0 && S.b > 0)) return;
+    S.a--; S.b--;
+  }else{
+    if(!(S.b - S.a > 0)) return;
+    S.b--;
+  }
+  S.marks[n] = pending;
+  S.hist.push({t:pending, n:n});
+  pending = null;
+  save(); render();
+}
+
+$('undoBtn').addEventListener('click', ()=>{
+  pending = null;
+  const last = S.hist.pop();
+  if(last){
+    if(last.t === 'hit'){ S.a++; S.b++; } else { S.b++; }
+    delete S.marks[last.n];
+    save();
+  }
+  render();
+});
+
+/* リセット */
+$('resetBtn').addEventListener('click', ()=>$('resetModal').classList.add('show'));
+$('resetCancel').addEventListener('click', ()=>$('resetModal').classList.remove('show'));
+$('resetOk').addEventListener('click', ()=>{
+  S.a = S.initA; S.b = S.initB; S.marks = {}; S.hist = []; pending = null;
+  save(); render();
+  $('resetModal').classList.remove('show');
+});
+
+/* 設定 */
+$('setBtn').addEventListener('click', ()=>{
+  $('inA').value = S.initA || '';
+  $('inB').value = S.initB || '';
+  $('setMsg').textContent = '';
+  $('setModal').classList.add('show');
+});
+$('setCancel').addEventListener('click', ()=>$('setModal').classList.remove('show'));
+$('setOk').addEventListener('click', ()=>{
+  const A = Number($('inA').value), B = Number($('inB').value);
+  if($('inA').value === '' || $('inB').value === '' || !Number.isInteger(A) || !Number.isInteger(B) || A < 0 || B < 0){
+    $('setMsg').textContent = '0以上の整数を入力してください'; return;
+  }
+  if(A > B){ $('setMsg').textContent = '当たりは口数以下にしてください'; return; }
+  S = {initA:A, initB:B, a:A, b:B, marks:{}, hist:[]};
+  pending = null;
+  save(); render();
+  $('setModal').classList.remove('show');
+});
+
+/* ===== 時計 ===== */
+function tick(){
+  const d = new Date(), p = v => String(v).padStart(2,'0');
+  $('clock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  setTimeout(tick, 1000 - d.getMilliseconds() + 5);
+}
+tick();
+
+render();
+setTimeout(fitAll, 300);
+</script>
+</body>
+</html>
