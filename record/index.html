@@ -63,7 +63,10 @@ button:disabled{opacity:.3;cursor:default}
 .app.s20 .r6{grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:6px}
 .app.s20 .num{font-size:4.8cqh}
 .app.s20 .num:nth-child(n+21){display:none}
-.num svg{position:absolute;left:4%;top:4%;width:92%;height:92%;pointer-events:none;}
+.num svg{position:absolute;left:4%;top:5%;width:92%;height:90%;pointer-events:none;overflow:visible;}
+.num svg *{stroke-width:var(--mk,5px)}
+.num.mk-hit{background:#ffe9ee}
+.num.mk-miss{background:#efeff3}
 
 /* 領域7：15% 時計 */
 .r7{height:10%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:.4cqh;border-radius:14px;background:linear-gradient(135deg,#2a2f45,#151826);box-shadow:0 3px 10px rgba(21,24,38,.3);}
@@ -111,6 +114,7 @@ button:disabled{opacity:.3;cursor:default}
   .r4 button,.r5 button{font-size:9.5cqh}
   .r6{height:70%;padding:1.6cqh 0 1cqh}
   .num{font-size:6.6cqh}
+  .num svg *{stroke-width:7px}
   .app.s20 .num{font-size:7.8cqh}
   .r7{height:21%;margin-top:.6cqh}
   .credit{height:8%;font-size:3cqh}
@@ -175,7 +179,7 @@ button:disabled{opacity:.3;cursor:default}
 
 
 <script>
-const APP_VERSION = "1.0.6";
+const APP_VERSION = "1.0.7";
 
 /* ===== 更新チェック（起動時・復帰時に最新版があれば即リロード） ===== */
 async function checkUpdate(){
@@ -209,8 +213,8 @@ const $ = id => document.getElementById(id);
 const app = $('app');
 
 /* ===== 番号ボタン（20口／30口） ===== */
-const SVG_CIRCLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e60012" stroke-width="9"/></svg>';
-const SVG_CROSS  = '<svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" stroke="#e60012" stroke-width="10" stroke-linecap="round"/></svg>';
+const SVG_CIRCLE = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><ellipse cx="50" cy="50" rx="43" ry="41" fill="none" stroke="#e60012" vector-effect="non-scaling-stroke"/></svg>';
+const SVG_CROSS  = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M12 10 L88 90 M88 10 L12 90" stroke="#e60012" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>';
 const grid = $('grid');
 for(let i=1;i<=30;i++){
   const b = document.createElement('button');
@@ -242,6 +246,7 @@ function render(){
     const n = btn.dataset.n, m = S.marks[n];
     const old = btn.querySelector('svg'); if(old) old.remove();
     if(m) btn.insertAdjacentHTML('beforeend', m === 'hit' ? SVG_CIRCLE : SVG_CROSS);
+    btn.classList.toggle('mk-hit', m === 'hit'); btn.classList.toggle('mk-miss', m === 'miss');
   });
   fitAll();
 }
