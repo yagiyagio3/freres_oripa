@@ -32,20 +32,20 @@ button:disabled{opacity:.3;cursor:default}
 #resetBtn{background:linear-gradient(180deg,#ff5a6e,#d9183b)}
 
 /* 領域2：12% */
-.r2{height:11%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:.5cqh 0 0;background:#fff;border-radius:14px;box-shadow:0 3px 10px rgba(80,60,140,.12);}
+.r2{height:10%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:.5cqh 0 0;background:#fff;border-radius:14px;box-shadow:0 3px 10px rgba(80,60,140,.12);}
 .counter{display:inline-flex;align-items:baseline;gap:.12em;white-space:nowrap;line-height:1;}
 .lbl{font-size:3cqh;font-weight:800;color:#333;}
 .big{font-weight:900;-webkit-text-stroke:.035em currentColor;font-variant-numeric:tabular-nums;}
 #a{color:var(--pink)} #b{color:var(--blue)} .slash{color:#888;-webkit-text-stroke:.02em #888}
 
 /* 領域3：12% */
-.r3{height:11%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:.6cqh 0;}
+.r3{height:10%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:.6cqh 0;}
 .box{border:2px solid var(--ink);border-radius:12px;background:linear-gradient(180deg,#fff,#f4f1fa);box-shadow:0 2px 6px rgba(80,60,140,.10);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .box span{font-weight:900;-webkit-text-stroke:.03em var(--ink);white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;}
 
 /* 領域4・5：各10% */
-.r4,.r5{height:10%;padding:.6cqh 0;}
-.r4 button,.r5 button{width:100%;height:100%;border-radius:14px;font-size:5.4cqh;font-weight:900;letter-spacing:.08em;}
+.r4,.r5{height:9%;padding:.6cqh 0;}
+.r4 button,.r5 button{width:100%;height:100%;border-radius:14px;font-size:5cqh;font-weight:900;letter-spacing:.08em;}
 .hit{background:linear-gradient(180deg,#ff6aa8,#ff2d87 55%,#e8106f);color:#fff;border:4px solid #e8106f;box-shadow:0 4px 10px rgba(255,45,135,.35);-webkit-text-stroke:.035em #fff;}
 .miss{background:#fff;color:var(--blue);border:4px solid var(--blue);box-shadow:0 4px 10px rgba(30,91,255,.18);-webkit-text-stroke:.035em var(--blue);}
 .hit.on{animation:blinkHit .5s steps(1) infinite}
@@ -55,15 +55,18 @@ button:disabled{opacity:.3;cursor:default}
 .nudge{animation:nudge .3s}
 @keyframes nudge{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
 
-/* 領域6：35% */
-.r6{height:34%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:6px;padding:.8cqh 0;}
+/* 領域6：1〜30（6列×5段） */
+.r6{height:40%;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:5px;padding:.8cqh 0;}
 .num{position:relative;border:2.5px solid var(--ink);background:#fff;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,.10);
-  font-size:4.5cqh;font-weight:900;color:var(--ink);-webkit-text-stroke:.03em var(--ink);font-variant-numeric:tabular-nums;}
+  font-size:3.9cqh;font-weight:900;color:var(--ink);-webkit-text-stroke:.03em var(--ink);font-variant-numeric:tabular-nums;}
 .num:active{background:#f0f0f0}
+.app.s20 .r6{grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:6px}
+.app.s20 .num{font-size:4.8cqh}
+.app.s20 .num:nth-child(n+21){display:none}
 .num svg{position:absolute;left:4%;top:4%;width:92%;height:92%;pointer-events:none;}
 
 /* 領域7：15% 時計 */
-.r7{height:12%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:.4cqh;border-radius:14px;background:linear-gradient(135deg,#2a2f45,#151826);box-shadow:0 3px 10px rgba(21,24,38,.3);}
+.r7{height:10%;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:.4cqh;border-radius:14px;background:linear-gradient(135deg,#2a2f45,#151826);box-shadow:0 3px 10px rgba(21,24,38,.3);}
 #clock{display:inline-block;font-weight:900;color:#fff;-webkit-text-stroke:.045em #fff;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
 
 .credit{height:3%;display:flex;align-items:center;justify-content:center;font-size:1.6cqh;font-weight:700;letter-spacing:.06em;color:#6b6585;}
@@ -79,6 +82,8 @@ button:disabled{opacity:.3;cursor:default}
 .field label{width:5.5em;font-size:20px;font-weight:800}
 .field label.pk{color:var(--pink)} .field label.bl{color:var(--blue)}
 .field input{flex:1;min-width:0;font-size:28px;font-weight:900;padding:8px 12px;border:2px solid var(--ink);border-radius:10px;text-align:right;font-family:inherit;-webkit-user-select:text;user-select:text}
+.field select{flex:1;min-width:0;font-size:28px;font-weight:900;padding:8px 40px 8px 12px;border:2px solid var(--ink);border-radius:10px;text-align:right;text-align-last:right;font-family:inherit;color:var(--ink);
+  -webkit-appearance:none;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 7l6 6 6-6' fill='none' stroke='%23111' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center/18px}
 .msg{min-height:1.4em;color:var(--red);font-size:15px;font-weight:700;text-align:center;margin:0 0 8px}
 .sheet p.q{font-size:18px;font-weight:700;text-align:center;margin:4px 0 20px;line-height:1.5}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -104,9 +109,10 @@ button:disabled{opacity:.3;cursor:default}
   .r3{height:22%;padding:1.2cqh 0}
   .r4,.r5{height:22%;padding:1.2cqh 0}
   .r4 button,.r5 button{font-size:9.5cqh}
-  .r6{height:66%;padding:1.6cqh 0 1cqh}
-  .num{font-size:7.5cqh}
-  .r7{height:25%;margin-top:.6cqh}
+  .r6{height:70%;padding:1.6cqh 0 1cqh}
+  .num{font-size:6.6cqh}
+  .app.s20 .num{font-size:7.8cqh}
+  .r7{height:21%;margin-top:.6cqh}
   .credit{height:8%;font-size:3cqh}
 }
 </style>
@@ -152,7 +158,7 @@ button:disabled{opacity:.3;cursor:default}
   <div class="sheet">
     <h2>設定</h2>
     <div class="field"><label class="pk" for="inA">当たり</label><input id="inA" type="number" inputmode="numeric" pattern="[0-9]*" min="0"></div>
-    <div class="field"><label class="bl" for="inB">口数</label><input id="inB" type="number" inputmode="numeric" pattern="[0-9]*" min="0"></div>
+    <div class="field"><label class="bl" for="inB">口数</label><select id="inB"><option value="20">20</option><option value="30">30</option></select></div>
     <p class="msg" id="setMsg"></p>
     <div class="btns"><button class="cancel" id="setCancel">キャンセル</button><button class="ok" id="setOk">登録</button></div>
   </div>
@@ -162,14 +168,14 @@ button:disabled{opacity:.3;cursor:default}
 <div class="modal" id="resetModal">
   <div class="sheet">
     <h2>リセット</h2>
-    <p class="q">当たりと残口数を初期値に戻し、<br>1〜20の記録も消去します。</p>
+    <p class="q">当たりと残口数を初期値に戻し、<br>番号の○×記録も消去します。</p>
     <div class="btns"><button class="cancel" id="resetCancel">キャンセル</button><button class="danger" id="resetOk">リセット</button></div>
   </div>
 </div>
 
 
 <script>
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 
 /* ===== 更新チェック（起動時・復帰時に最新版があれば即リロード） ===== */
 async function checkUpdate(){
@@ -196,16 +202,17 @@ const KEY = 'kujiRecord.v1';
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 let S = load() || {initA:5, initB:20, a:5, b:20, marks:{}, hist:[]};
+if(S.slots !== 20 && S.slots !== 30) S.slots = (S.initB === 30 ? 30 : 20);
 let pending = null; // 'hit' | 'miss' | null
 
 const $ = id => document.getElementById(id);
 const app = $('app');
 
-/* ===== 1〜20ボタン ===== */
+/* ===== 番号ボタン（20口／30口） ===== */
 const SVG_CIRCLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e60012" stroke-width="9"/></svg>';
 const SVG_CROSS  = '<svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" stroke="#e60012" stroke-width="10" stroke-linecap="round"/></svg>';
 const grid = $('grid');
-for(let i=1;i<=20;i++){
+for(let i=1;i<=30;i++){
   const b = document.createElement('button');
   b.className = 'num'; b.dataset.n = i;
   b.innerHTML = '<span>' + i + '</span>';
@@ -215,6 +222,7 @@ for(let i=1;i<=20;i++){
 
 /* ===== 表示 ===== */
 function render(){
+  app.classList.toggle('s20', S.slots === 20);
   $('a').textContent = S.a;
   $('b').textContent = S.b;
   if(S.a > 0 && S.b > 0){
@@ -283,6 +291,7 @@ $('missBtn').addEventListener('click', ()=>{ pending = (pending === 'miss') ? nu
 function pressNumber(n){
   if(!pending){ nudge(); return; }      // ①が未選択
   if(S.marks[n]) return;                // 記録済みの番号
+  if(n > S.slots) return;
   if(pending === 'hit'){
     if(!(S.a > 0 && S.b > 0)) return;
     S.a--; S.b--;
@@ -319,18 +328,18 @@ $('resetOk').addEventListener('click', ()=>{
 /* 設定 */
 $('setBtn').addEventListener('click', ()=>{
   $('inA').value = S.initA || '';
-  $('inB').value = S.initB || '';
+  $('inB').value = String(S.slots);
   $('setMsg').textContent = '';
   $('setModal').classList.add('show');
 });
 $('setCancel').addEventListener('click', ()=>$('setModal').classList.remove('show'));
 $('setOk').addEventListener('click', ()=>{
   const A = Number($('inA').value), B = Number($('inB').value);
-  if($('inA').value === '' || $('inB').value === '' || !Number.isInteger(A) || !Number.isInteger(B) || A < 0 || B < 0){
+  if($('inA').value === '' || !Number.isInteger(A) || A < 0 || (B !== 20 && B !== 30)){
     $('setMsg').textContent = '0以上の整数を入力してください'; return;
   }
   if(A > B){ $('setMsg').textContent = '当たりは口数以下にしてください'; return; }
-  S = {initA:A, initB:B, a:A, b:B, marks:{}, hist:[]};
+  S = {initA:A, initB:B, a:A, b:B, slots:B, marks:{}, hist:[]};
   pending = null;
   save(); render();
   $('setModal').classList.remove('show');
